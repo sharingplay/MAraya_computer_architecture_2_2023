@@ -2,6 +2,7 @@ import threading
 import tkinter as tk
 import random
 import secrets
+import datetime
 
 
 class Memory:
