@@ -185,7 +185,7 @@ class Ventana:
     def continuousUpdate(self, lista_procesadores, memoria, current_processor):
         # llama al método actualizar cada 2 segundos
         self.actualizar(lista_procesadores, memoria)
-        self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria, current_processor))
+        self.master.after(1000, lambda: self.continuousUpdate(lista_procesadores, memoria, current_processor))
 
         # inicia el bucle de eventos
         self.master.mainloop()
@@ -237,16 +237,6 @@ def main():
 
     # ejecuta la ventana
     root.mainloop()
-    """
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-    p1.getRandomInstruction()
-"""
 
 if __name__ == "__main__":
     main()
