@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 
 class Memory:
@@ -34,7 +35,7 @@ class Processor:
                             "011": 'I'}
 
     def updateLogs(self,newLog):
-        self.logs += " " + newLog
+        self.logs += "\n" + newLog
 
     def getlogs(self):
         return self.logs
@@ -65,12 +66,12 @@ class Processor:
         return self.number
 
 class Ventana:
-    def __init__(self, master):
+    def __init__(self, master, mode):
         self.currentOperations = {1: "",
                                   2: "",
                                   3: "",
                                   4: ""}
-
+        self.contador = 1
         self.master = master
 
         # creates 4 text boxes for the processors
@@ -95,7 +96,7 @@ class Ventana:
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
         # creates the buttons
-        self.boton1 = tk.Button(self.master, text="Boton 1")
+        self.boton1 = tk.Button(self.master, text= "Contador", command = lambda:self.stepUpdate(self.lista_procesadores,self.mem))
         self.boton1.grid(row=2, column=0, padx=10, pady=10)
 
         self.boton2 = tk.Button(self.master, text="Boton 2")
@@ -109,6 +110,7 @@ class Ventana:
 
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
+        print("Se actualiza")
         #Iterates processors text boxes
         for i, procesador in enumerate(lista_procesadores):
             if i == 0:
@@ -146,8 +148,25 @@ class Ventana:
         for key, value in memoria.getMemBlocks().items():  # Cache values
             self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
 
-def main():
+    def continuosUpdate(self, lista_procesadores, memoria):
+        # llama al método actualizar cada 2 segundos
+        self.actualizar(lista_procesadores, memoria)
+        self.master.after(2000, lambda: self.continuosUpdate(lista_procesadores, memoria))
 
+        # inicia el bucle de eventos
+        self.master.mainloop()
+
+    def stepUpdate(self, lista_procesadores, memoria):
+        self.actualizar(lista_procesadores, memoria)
+        self.contador += 1
+        print(self.contador)
+
+def main():
+    #validates execution mode
+    try:
+        mode = int(input("Seleccion el modo de ejecucion inicial:\n1)Ejecucion continua\n2)Ejecucion paso a paso\n"))
+    except ValueError:
+        print("El valor ingresado no es un entero")
     #Creates a memory
     mem = Memory()
 
@@ -163,10 +182,14 @@ def main():
     #Creates display window
     root = tk.Tk()
     root.title("Protocolo MOESI para coherencia de cache en sistemas multiprocesador")
-    ventana = Ventana(root)
+    ventana = Ventana(root,mode)
 
     #Updates display window
-    ventana.actualizar(processors, mem)
+    if mode == 1:
+        ventana.continuosUpdate(processors,mem)
+    else:
+        ventana.stepUpdate(processors,mem)
+
 
     # ejecuta la ventana
     root.mainloop()
