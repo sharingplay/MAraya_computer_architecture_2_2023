@@ -127,7 +127,7 @@ class Ventana:
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
         # creates the buttons
-        self.boton1 = tk.Button(self.master, text= "p1")
+        self.boton1 = tk.Button(self.master, text= "boton1")
         self.boton1.grid(row=2, column=0, padx=10, pady=10)
 
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
@@ -201,7 +201,6 @@ class Ventana:
     def continuousUpdate(self, lista_procesadores, memoria,modo):
         # llama al método actualizar cada 2 segundos
         if modo == 1:
-            lista_procesadores[0].getRandomInstruction()
             self.actualizar(lista_procesadores,memoria)
             self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
             # inicia el bucle de eventos
