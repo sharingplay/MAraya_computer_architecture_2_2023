@@ -9,7 +9,7 @@ class Memory:
                        "100": 0,
                        "101": 0,
                        "110": 0,
-                       "111": 1}
+                       "111": 0}
 
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
@@ -162,6 +162,7 @@ def main():
 
     #Creates display window
     root = tk.Tk()
+    root.title("Protocolo MOESI para coherencia de cache en sistemas multiprocesador")
     ventana = Ventana(root)
 
     #Updates display window
