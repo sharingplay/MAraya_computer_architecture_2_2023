@@ -94,13 +94,14 @@ class Processor:
         return self.number
 
 class Ventana:
-    def __init__(self, master, modo, listaProcesadores):
+    def __init__(self, master, modo):
         self.currentOperations = {1: "",
                                   2: "",
                                   3: "",
                                   4: ""}
         self.pause = False
-        
+        self.lock = threading.Lock() #lock pause asset
+
         self.master = master
         self.modoActual = modo
 
@@ -126,7 +127,7 @@ class Ventana:
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
         # creates the buttons
-        self.boton1 = tk.Button(self.master, text= "p1")
+        self.boton1 = tk.Button(self.master, text= "boton1")
         self.boton1.grid(row=2, column=0, padx=10, pady=10)
 
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
@@ -139,64 +140,72 @@ class Ventana:
         self.boton4.grid(row=2, column=3, padx=10, pady=10)
 
     def changePause(self):
-        self.pause = not self.pause
+        with self.lock: #adquire pause lock
+            self.pause = not self.pause
 
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
-        if self.pause == False:
-            print("Se actualiza")
-            #Iterates processors text boxes
-            for i, procesador in enumerate(lista_procesadores):
-                if i == 0:
-                    textBox = self.text_box1
-                elif i == 1:
-                    textBox = self.text_box2
-                elif i == 2:
-                    textBox = self.text_box3
-                elif i == 3:
-                    textBox = self.text_box4
+        def newOperationRandProcessor(): # selects a random processor to give a random instruction
+            pNumber = random.randint(0, 3)
+            lista_procesadores[pNumber].getRandomInstruction()
+            print(f"se asigna instruccion al procesador {pNumber+1}\n")
 
-                #Clean the text box
-                textBox.delete(1.0, tk.END)
+        with self.lock:
+            if self.pause == False:
+                newOperationRandProcessor()
+                print("Se actualiza")
+                #Iterates processors text boxes
+                for i, procesador in enumerate(lista_procesadores):
+                    if i == 0:
+                        textBox = self.text_box1
+                    elif i == 1:
+                        textBox = self.text_box2
+                    elif i == 2:
+                        textBox = self.text_box3
+                    elif i == 3:
+                        textBox = self.text_box4
 
-                #Updates cache data for each processor
-                textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
-                textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n","center")
-                for key,value in procesador.getCache().items(): #Cache values
-                    textBox.insert('end', f"{key}: {value}\n")
+                    #Clean the text box
+                    textBox.delete(1.0, tk.END)
 
-                textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
-                textBox.insert('end', f"State of the cache blocks:\n","center")
-                for key,value in lista_procesadores[i].getCacheStates().items(): #Cache states
-                    textBox.insert('end', f"{key}: {value}\n")
+                    #Updates cache data for each processor
+                    textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
+                    textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n","center")
+                    for key,value in procesador.getCache().items(): #Cache values
+                        textBox.insert('end', f"{key}: {value}\n")
 
-                #Keeps the operations done by the processors updated
-                self.currentOperations[i+1] = procesador.getCurrentOperation()
+                    textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
+                    textBox.insert('end', f"State of the cache blocks:\n","center")
+                    for key,value in lista_procesadores[i].getCacheStates().items(): #Cache states
+                        textBox.insert('end', f"{key}: {value}\n")
 
-            #Writes the actions done by the processors
-            self.text_box_info.delete(1.0,tk.END)
-            for key, value in self.currentOperations.items():  #Cache values
-                self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n\n")
+                    #Keeps the operations done by the processors updated
+                    self.currentOperations[i+1] = procesador.getCurrentOperation()
 
-            #Updates the memory on screen
-            self.text_box_memory.delete(1.0, tk.END)
-            self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-            self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n","center")
-            for key, value in memoria.getMemBlocks().items():  # Cache values
-                self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
-        else:
-            print("Esta pausado")
+                #Writes the actions done by the processors
+                self.text_box_info.delete(1.0,tk.END)
+                for key, value in self.currentOperations.items():  #Cache values
+                    self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n\n")
+
+                #Updates the memory on screen
+                self.text_box_memory.delete(1.0, tk.END)
+                self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n","center")
+                for key, value in memoria.getMemBlocks().items():  # Cache values
+                    self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
+            else:
+                print("Esta pausado")
+                return
 
 
     def continuousUpdate(self, lista_procesadores, memoria,modo):
         # llama al método actualizar cada 2 segundos
-
         if modo == 1:
-            lista_procesadores[0].getRandomInstruction()
             self.actualizar(lista_procesadores,memoria)
             self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
             # inicia el bucle de eventos
             self.master.mainloop()
+
         #agregar el cambio a paso a paso***************************************** con un else
 
 
@@ -224,7 +233,7 @@ def main():
     #Creates display window
     root = tk.Tk()
     root.title("Protocolo MOESI para coherencia de cache en sistemas multiprocesador")
-    ventana = Ventana(root,modo,processors)
+    ventana = Ventana(root,modo)
 
 
     #Updates display window
