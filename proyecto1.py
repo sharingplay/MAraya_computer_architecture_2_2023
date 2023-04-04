@@ -73,6 +73,7 @@ class Ventana:
                                   4: ""}
         self.contador = 1
         self.master = master
+        self.update_id = None
 
         # creates 4 text boxes for the processors
         self.text_box1 = tk.Text(self.master, height=10, width=30)
@@ -96,11 +97,11 @@ class Ventana:
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
         # creates the buttons
-        self.boton1 = tk.Button(self.master, text= "Contador", command = lambda:self.stepUpdate(self.lista_procesadores,self.mem))
+        self.boton1 = tk.Button(self.master, text= "Contador")
         self.boton1.grid(row=2, column=0, padx=10, pady=10)
 
-        self.boton2 = tk.Button(self.master, text="Boton 2")
-        self.boton2.grid(row=2, column=1, padx=10, pady=10)
+        self.boton_pause = tk.Button(self.master, text="Pause")
+        self.boton_pause.grid(row=2, column=1, padx=10, pady=10)
 
         self.boton3 = tk.Button(self.master, text="Boton 3")
         self.boton3.grid(row=2, column=2, padx=10, pady=10)
@@ -148,18 +149,19 @@ class Ventana:
         for key, value in memoria.getMemBlocks().items():  # Cache values
             self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
 
-    def continuosUpdate(self, lista_procesadores, memoria):
+    def continuousUpdate(self, lista_procesadores, memoria):
         # llama al método actualizar cada 2 segundos
         self.actualizar(lista_procesadores, memoria)
-        self.master.after(2000, lambda: self.continuosUpdate(lista_procesadores, memoria))
+        self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria))
 
         # inicia el bucle de eventos
         self.master.mainloop()
 
-    def stepUpdate(self, lista_procesadores, memoria):
+    def stepUpdate(self, lista_procesadores, memoria): #DOESNT WORK
         self.actualizar(lista_procesadores, memoria)
         self.contador += 1
         print(self.contador)
+
 
 def main():
     #validates execution mode
@@ -184,10 +186,12 @@ def main():
     root.title("Protocolo MOESI para coherencia de cache en sistemas multiprocesador")
     ventana = Ventana(root,mode)
 
+
     #Updates display window
     if mode == 1:
-        ventana.continuosUpdate(processors,mem)
-    else:
+        ventana.continuousUpdate(processors,mem)
+
+    elif mode == 2:
         ventana.stepUpdate(processors,mem)
 
 
