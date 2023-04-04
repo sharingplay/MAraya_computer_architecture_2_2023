@@ -1,5 +1,7 @@
 import time
 import tkinter as tk
+import random
+import math
 
 class Memory:
     def __init__(self):
@@ -161,6 +163,18 @@ class Ventana:
         self.actualizar(lista_procesadores, memoria)
         self.contador += 1
         print(self.contador)
+
+
+#assigns possible
+def getRandomInstruction():
+    randomNumber = random()
+
+    if randomNumber < 0.3:
+        return "write"
+    elif randomNumber < 0.7:
+        return "read"
+    else:
+        return "calc"
 
 
 def main():
