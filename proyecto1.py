@@ -9,7 +9,7 @@ class Memory:
                        "100": 0,
                        "101": 0,
                        "110": 0,
-                       "111": 0}
+                       "111": 1}
 
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
