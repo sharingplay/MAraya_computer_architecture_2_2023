@@ -71,6 +71,9 @@ class Processor:
     def getlogs(self):
         return self.logs
 
+    def addNewLog(self,log):
+        self.logs += "\n"+log
+
     def getCurrentOperation(self):
         return self.currentOperation
 
@@ -78,17 +81,19 @@ class Processor:
         self.cacheStates[block] = state
 
 
-    def updateCache(self,block,value,state): #validates the 2 way set in case a block needs to be changed
+    def updateCache(self,address,value,state): #validates the 2 way set in case a block needs to be changed
         #If the block is in the cache, just overwrite it
-        if block in self.cache:
-            self.cache[block] = value
-            self.cacheStates[block] = state
+        if address in self.cache:
+            self.cache[address] = value
+            self.cacheStates[address] = state
 
         #determines in which block it should be writen in case there is no invalid block ******************
         else:
-            set = int(block) % 2 #gets the set with a 2 way set logic
+            set = int(address) % 2 #gets the set with a 2 way set logic
+            # gets the address of the blocks in set 0
             block1 = self.getCacheStates()[0]
             block2 = self.getCacheStates()[1]
+            # gets the address of the blocks in set 1
             block3 = self.getCacheStates()[2]
             block4 = self.getCacheStates()[3]
 
@@ -101,22 +106,20 @@ class Processor:
                 blockB = block4
 
             # Checks invalid blocks
-            if "I" in blockA:
-                self.cache[block] = self.cache.pop(blockA)
-            elif "I" in blockB:
-                self.cache[block] = self.cache.pop(blockB)
+            if "I" in blockA or "I" in blockB:
+                self.cache[address] = value
+                self.cacheStates[address] = state
 
             # Checks shared blocks
-            elif "S" in blockA:
-                self.cache[block] = self.cache.pop(blockA)
-            elif "S" in blockB:
-                self.cache[block] = self.cache.pop(blockB)
+            elif "S" in blockA or "S" in blockB:
+                self.cache[address] = value
+                self.cacheStates[address] = state
 
             # Checks Exclusive blocks
-            elif "O" in blockA:
-                self.cache[block] = self.cache.pop(blockA)
-            elif "O" in blockB:
-                self.cache[block] = self.cache.pop(blockB)
+            elif "O" in blockA or "O" in blockB:
+                self.cache[address] = value
+                self.cacheStates[address] = state
+
 
 
 
@@ -140,6 +143,9 @@ class Processor:
 
     def getHitMiss(self):
         return self.hitMiss
+
+    def invalidateBlock(self,block):
+        self.cacheStates[block] = "I"
 
 class Ventana:
     def __init__(self, master, modo):
@@ -213,20 +219,47 @@ class Ventana:
                 if address == key:
                     if value == "M" or "S" or "E":
                         listaProcesadores[processorNumber].setHitMiss("Hit")
+                        listaProcesadores[processorNumber].addNewLog(f"El valor de {address} estaba en cache y se volvio a leer")
                         print("Se hace un read en cache")
                         print(f"valores cache: {processorCacheValues}")
                         print(f"estados cache: {processorCacheStates}")
                 else:
                     listaProcesadores[processorNumber].setHitMiss("Miss")
-                    print("Hay que leer los demas caches") #**********************************
+                    listaProcesadores[processorNumber].addNewLog(f"Hubo Miss, no se encontro el valor en el cache de P{processorNumber}")
+                    print("Hay que leer los demas caches")
 
                     #Checks if the value is valid in other processors
                     for procesador in listaProcesadores:
                         if address in procesador.getCacheStates() and procesador.getCacheState(address) != "I":
-                            #VALIDAR AQUI LOS DEMAS ESTADOS Y ACTUALIZAR EL CACHE **************
-                            print(f"El procesador {processorNumber} tenia el dato que buscaba")
+                            if procesador.getCacheState(address) == "E":
+                                # Updates state of the processor to S
+                                listaProcesadores[processorNumber].updateCache(address,procesador.getCacheBlockValue(address),"S")
+                                print(f"El procesador {processorNumber} tenia el dato que buscaba y estaba en E")
+
+                                #Updates E state to S of the processor that was read
+                                procesador.updateCache(address,procesador.getCacheBlockValue(address), "S")
+                                procesador.addNewLog(f"El P{processorNumber} leyo la direccion {address} de "
+                                                     f"P{procesador.getNumber()}y se cambio de E a S")
+
+
+                            elif procesador.getCacheState(address) == "M":
+                                # Updates state of the processor to S
+                                listaProcesadores[processorNumber].updateCache(address,procesador.getCacheBlockValue(address),"S")
+                                print(f"El procesador {processorNumber} tenia el dato que buscaba y estaba en M")
+
+                                # Updates M state to O of the processor that was read
+                                procesador.updateCache(address, procesador.getCacheBlockValue(address), "M")
+                                procesador.addNewLog(f"El P{processorNumber} leyo la direccion {address} de "
+                                                     f"P {procesador.getNumber()}y se cambio de M a O")
+
+
+                            else: # Case where the state was S or O stays the same
+                                listaProcesadores[processorNumber].updateCache(address,procesador.getCacheBlockValue(address),"S")
+                                listaProcesadores[processorNumber].addNewLog(f"Se leyo el dato del P{procesador.getNumber()}")
+
                         else:
                             print(f"El procesador {processorNumber} no tiene la direccion que quiere leer o es Invalida")
+                    #Buscar en memoria el dato***************************
 
         #elif request == "WRITE":
 
