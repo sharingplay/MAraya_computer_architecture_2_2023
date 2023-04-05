@@ -2,8 +2,6 @@ import threading
 import tkinter as tk
 import random
 import secrets
-import datetime
-
 
 class Memory:
     def __init__(self):
@@ -24,6 +22,7 @@ class Memory:
 
     def getMemBlocks(self):
         return self.blocks
+
 class Processor:
     def __init__(self, number):
         self.logs = "" #registers every action the processor has done
@@ -148,8 +147,9 @@ class Ventana:
     def actualizar(self, lista_procesadores, memoria):
         def newOperationRandProcessor(): # selects a random processor to give a random instruction
             pNumber = random.randint(0, 3)
-            lista_procesadores[pNumber].getRandomInstruction()
             print(f"se asigna instruccion al procesador {pNumber+1}\n")
+            lista_procesadores[pNumber].getRandomInstruction()
+
 
         with self.lock:
             if self.pause == False:
