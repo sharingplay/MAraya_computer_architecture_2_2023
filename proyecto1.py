@@ -74,6 +74,9 @@ class Processor:
     def getCurrentOperation(self):
         return self.currentOperation
 
+    def updateBlockState(self,block,state):
+        self.cacheStates[block] = state
+
 
     def updateCache(self,block,value,state): #validates the 2 way set in case a block needs to be changed
         #If the block is in the cache, just overwrite it
@@ -84,21 +87,37 @@ class Processor:
         #determines in which block it should be writen in case there is no invalid block ******************
         else:
             set = int(block) % 2 #gets the set with a 2 way set logic
+            block1 = self.getCacheStates()[0]
+            block2 = self.getCacheStates()[1]
+            block3 = self.getCacheStates()[2]
+            block4 = self.getCacheStates()[3]
+
+            #checks the blocks of the specific set
             if set == 0:
-                block1 = self.getCacheStates()[0]
-                block2 = self.getCacheStates()[1]
-                if "I" in block1:
-
-
-                for key, value in self.cacheStates.items():
-
-                if block1 == "I":
-                    self.cache[block] = self.cache.pop(block1)
-                elif block1 == "S":
-
+                blockA = block1
+                blockB = block2
             else:
-                block3 = self.getCacheStates()[2]
-                block4 = self.getCacheStates()[3]
+                blockA = block3
+                blockB = block4
+
+            # Checks invalid blocks
+            if "I" in blockA:
+                self.cache[block] = self.cache.pop(blockA)
+            elif "I" in blockB:
+                self.cache[block] = self.cache.pop(blockB)
+
+            # Checks shared blocks
+            elif "S" in blockA:
+                self.cache[block] = self.cache.pop(blockA)
+            elif "S" in blockB:
+                self.cache[block] = self.cache.pop(blockB)
+
+            # Checks Exclusive blocks
+            elif "O" in blockA:
+                self.cache[block] = self.cache.pop(blockA)
+            elif "O" in blockB:
+                self.cache[block] = self.cache.pop(blockB)
+
 
 
     def getCache(self):
@@ -199,7 +218,7 @@ class Ventana:
                         print(f"estados cache: {processorCacheStates}")
                 else:
                     listaProcesadores[processorNumber].setHitMiss("Miss")
-                    print("Hay que leer los demas caches")
+                    print("Hay que leer los demas caches") #**********************************
 
                     #Checks if the value is valid in other processors
                     for procesador in listaProcesadores:
