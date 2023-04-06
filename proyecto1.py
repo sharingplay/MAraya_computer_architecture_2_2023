@@ -97,23 +97,33 @@ class Processor:
             for i in range(0+offset,2+offset):
                 # Checks invalid blocks
                 if "I" in self.cache[i]:
-                    self.cache[i] = [address,value,state]
+                    self.cache[i][0] = address
+                    self.cache[i][1] = value
+                    self.cache[i][2] = state
                     return
                 # Checks shared blocks
                 elif "S" in self.cache[i]:
-                    self.cache[i] = [address,value,state]
+                    self.cache[i][0] = address
+                    self.cache[i][1] = value
+                    self.cache[i][2] = state
                     return
                 # Checks Exclusive blocks
                 elif "E" in self.cache[i]:
-                    self.cache[i] = [address, value, state]
+                    self.cache[i][0] = address
+                    self.cache[i][1] = value
+                    self.cache[i][2] = state
                     return
                 # Checks Owned blocks
                 elif "O" in self.cache[i]:
-                    self.cache[i] = [address,value,state]
+                    self.cache[i][0] = address
+                    self.cache[i][1] = value
+                    self.cache[i][2] = state
                     return
-                #C CHeks Modified blocks
+                # Cheks Modified blocks
                 elif "M" in self.cache[i]:
-                    self.cache[i] = [address,value,state]
+                    self.cache[i][0] = address
+                    self.cache[i][1] = value
+                    self.cache[i][2] = state
                     return
 
 
@@ -182,6 +192,9 @@ class Ventana:
     def changePause(self):
         with self.lock: #adquire pause lock
             self.pause = not self.pause
+
+    def updateProcessor(self,procesador):
+        procesador.updateCache("111",str(secrets.token_hex(2)),"M")
 
     """def validateMOESI(self,instruction, listaProcesadores, memoria):
         processorNumber = int(instruction[0][-1])-1
@@ -329,6 +342,7 @@ class Ventana:
         if modo == 1:
             self.actualizar(lista_procesadores,memoria)
             self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
+            self.updateProcessor(lista_procesadores[0])
             # inicia el bucle de eventos
             self.master.mainloop()
 
