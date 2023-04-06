@@ -6,6 +6,15 @@ import secrets
 
 class Memory:
     def __init__(self):
+        self.blocks = {"000": "0xffff",
+                       "001": "0xffff",
+                       "010": "0xffff",
+                       "011": "0xffff",
+                       "100": "0xffff",
+                       "101": "0xffff",
+                       "110": "0xffff",
+                       "111": "0xffff"}
+        """
         self.blocks = {"000": "0x0000",
                        "001": "0x0045",
                        "010": "0x010a",
@@ -14,7 +23,7 @@ class Memory:
                        "101": "0xe213",
                        "110": "0xffaa",
                        "111": "0xfeaa"}
-
+        """
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
 
@@ -171,10 +180,14 @@ class Ventana:
                                   2: "",
                                   3: "",
                                   4: ""}
+
         self.currentHitMiss = {1: "",
                                2: "",
                                3: "",
                                4: ""}
+
+        self.inputOperation = ""
+
         self.pause = True
         self.lock = threading.Lock() #lock pause asset
 
@@ -224,10 +237,15 @@ class Ventana:
         self.boton4.grid(row=2, column=3, padx=10, pady=10)
 
     def openInputWindow(self):
-        inputWindow = InputWindow()
-        inputWindow.wait_window()
-        result = inputWindow.result
-        print(result)
+        if self.pause == True:
+            inputWindow = InputWindow()
+            inputWindow.wait_window()
+            self.master.wait_window(inputWindow.top)
+            self.inputOperation = inputWindow.result
+            print(f"Operacion desde la ventana {self.inputOperation}")
+
+        else:
+            print("No se puede ingresar una operacion si no esta pausada la ejecucion")
 
     def changePause(self):
         with self.lock: #adquire pause lock
@@ -257,9 +275,9 @@ class Ventana:
             self.readMOESI(processorList,memory, processorNumber, address)
 
         elif request == "WRITE":
-            print(f"Se quiere hacer un write del P{processorNumber}")
+            print(f"Se quiere hacer un write del P{processorNumber + 1}")
         else:
-            print(f"El P{processorNumber} hace un calc")
+            print(f"El P{processorNumber + 1} hace un calc")
 
     #checks if the data is in the processor cache
     def readMOESI(self, processorList, memory, processorNumber, address):
@@ -394,11 +412,13 @@ class Ventana:
 
 
 class InputWindow(tk.Toplevel):
-    def __init__(self, master=None):
+    def __init__(self, master = None):
         super().__init__(master)
         self.title("Instruction Input")
         self.geometry("275x175")
         self.resizable(False, False)
+
+        self.result = ""
 
         self.processorNumber = tk.StringVar(self)
         self.operation = tk.StringVar(self)
@@ -416,6 +436,7 @@ class InputWindow(tk.Toplevel):
         second_label.grid(row=1, column=0)
         self.second_combobox = ttk.Combobox(self, values=["READ", "WRITE", "CALC"], textvariable=self.operation)
         self.second_combobox.grid(row=1, column=1)
+        self.second_combobox.bind("<<ComboboxSelected>>", self.update_input_fields)
 
         # Address input label
         third_label = ttk.Label(self, text="address:", padding=(5,5))
@@ -446,14 +467,35 @@ class InputWindow(tk.Toplevel):
         self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
     def save_data(self):
-        # Obtener los datos ingresados y devolverlos como una tupla
+        # Returns input data
         number = self.processorNumber.get()
         instruction = self.operation.get()
-        address = self.address.get() if self.address.get() else ""
-        value = self.value.get() if self.value.get() else ""
+        address = self.address.get()
+        value = self.value.get()
+
         self.result = [number,instruction,address,value]
-        print(self.result)
+
+        if self.result[1] == "READ":
+            self.result.pop()
+        elif self.result[1] == "CALC":
+            del self.result[-2:]
+
+        print(f"Resultado desde el input window {self.result}")
         self.destroy()
+
+    def update_input_fields(self, event):
+        # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
+        if self.operation.get() == "CALC":
+            self.third_combobox.state(["disabled"])
+            self.fourth_entry.state(["disabled"])
+
+        elif self.operation.get() == "READ":
+            self.fourth_entry.state(["disabled"])
+            self.third_combobox.state(["!disabled"])
+
+        else:
+            self.third_combobox.state(["!disabled"])
+            self.fourth_entry.state(["!disabled"])
 
 def main():
     #validates execution mode
