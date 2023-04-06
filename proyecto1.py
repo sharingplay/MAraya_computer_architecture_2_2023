@@ -72,8 +72,6 @@ class Processor:
     def getCurrentOperation(self):
         return self.currentOperation
 
-
-
     def updateCache(self,address,value,state): #validates the 2 way set in case a block needs to be changed
         #If the block is in the cache, just overwrite it
         for i, block in enumerate(self.cache):
@@ -94,37 +92,60 @@ class Processor:
             else:
                 offset = 2
 
-            for i in range(0+offset,2+offset):
-                # Checks invalid blocks
-                if "I" in self.cache[i]:
-                    self.cache[i][0] = address
-                    self.cache[i][1] = value
-                    self.cache[i][2] = state
-                    return
-                # Checks shared blocks
-                elif "S" in self.cache[i]:
-                    self.cache[i][0] = address
-                    self.cache[i][1] = value
-                    self.cache[i][2] = state
-                    return
-                # Checks Exclusive blocks
-                elif "E" in self.cache[i]:
-                    self.cache[i][0] = address
-                    self.cache[i][1] = value
-                    self.cache[i][2] = state
-                    return
-                # Checks Owned blocks
-                elif "O" in self.cache[i]:
-                    self.cache[i][0] = address
-                    self.cache[i][1] = value
-                    self.cache[i][2] = state
-                    return
-                # Cheks Modified blocks
-                elif "M" in self.cache[i]:
-                    self.cache[i][0] = address
-                    self.cache[i][1] = value
-                    self.cache[i][2] = state
-                    return
+            #Checks invalid blocks
+            if "I" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "I" in self.cache[offset+1]:
+                self.cache[offset+1][0] = address
+                self.cache[offset+1][1] = value
+                self.cache[offset+1][2] = state
+
+            # Checks shared blocks
+            if "S" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "S" in self.cache[offset+1]:
+                self.cache[offset+1][0] = address
+                self.cache[offset+1][1] = value
+                self.cache[offset+1][2] = state
+
+            # Checks Owned blocks
+            elif "O" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "O" in self.cache[offset + 1]:
+                self.cache[offset + 1][0] = address
+                self.cache[offset + 1][1] = value
+                self.cache[offset + 1][2] = state
+
+            # Checks Exclusive blocks
+            elif "E" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "E" in self.cache[offset+1]:
+                self.cache[offset+1][0] = address
+                self.cache[offset+1][1] = value
+                self.cache[offset+1][2] = state
+
+            # Cheks Modified blocks
+            elif "M" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "M" in self.cache[offset+1]:
+                self.cache[offset+1][0] = address
+                self.cache[offset+1][1] = value
+                self.cache[offset+1][2] = state
 
 
     def getCache(self):
@@ -194,7 +215,87 @@ class Ventana:
             self.pause = not self.pause
 
     def updateProcessor(self,procesador):
-        procesador.updateCache("111",str(secrets.token_hex(2)),"M")
+        procesador.updateCache("100",str(secrets.token_hex(2)),random.choice(["M","S","O","I","E"]))
+
+    # Determines what operation was done and applies MOESI
+    def validateMOESI(self,instruction, processorList, memory):
+        processorNumber = int(instruction[0][-1])
+        request = instruction[1]
+
+        try:
+            address = instruction[2]
+            value = instruction[3]
+        except IndexError:
+            address = ''
+            value = ''
+
+        print(instruction)
+        if request == "READ":
+            print(f"Se quiere hacer un read del P{processorNumber + 1}")
+            self.readMOESI(processorList,memory, processorNumber, address)
+
+        elif request == "WRITE":
+            print(f"Se quiere hacer un write del P{processorNumber + 1}")
+        else:
+            print(f"El P{processorNumber + 1} hace un calc")
+
+    #checks if the data is in the processor cache
+    def readMOESI(self, processorList, memory, processorNumber, address):
+        if address in processorList[processorNumber].getCache():
+            for block in processorList[processorNumber].getCache():
+                # If it has a valid data value, reads it
+                if block[0] == address:
+                    if block[2] != "I":
+                        processorList[processorNumber].setHitMiss("Hit")
+                        processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {block[1]}")
+                        return
+                    else:
+                        processorList[processorNumber].setHitMiss("Miss")
+                        processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
+                        self.readMOESIProcessors(processorList, memory, processorNumber, address)
+        else:
+            processorList[processorNumber].setHitMiss("Miss")
+            processorList[processorNumber].addNewLog(f"Es un Miss porque {address} no esta en cache")
+            self.readMOESIProcessors(processorList, memory, processorNumber, address)
+
+    def readMOESIProcessors(self,processorList,memory,processorNumber,address):
+        for processor in processorList:
+            if address in processor.getCache():
+                for block in processor.getCache():
+                    if block[0] == address:
+                        # Read the cache of a processor with valid state
+                        if block[2] != "I":
+                            # Updates the cache of both processors
+                            if block[2] == "S" or "O":
+                                processorList[processorNumber].updateCache(block[0],block[1],"S")
+                                processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                                return
+
+                            elif block[2] == "M":
+                                processorList[processorNumber].updateCache(block[0], block[1], "S")
+                                processor.updateCache(block[0],block[1],"O")
+                                processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                                processor.addNewLog(f"El P{processorNumber} leyo {address} con un valor {block[1]}, se cambia el estado de M a O")
+                                return
+
+                            elif block[2] == "E":
+                                processorList[processorNumber].updateCache(block[0], block[1], "S")
+                                processor.updateCache(block[0],block[1],"S")
+                                processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                                processor.addNewLog(f"El P{processorNumber} leyo {address} con un valor {block[1]}, se cambia el estado de E a S")
+                                return
+
+        processorList[processorNumber].setHitMiss("Miss")
+        processorList[processorNumber].addNewLog(f"Es un Miss porque ningun procesador tiene el dato en un estado valido")
+        self.readMOESIMemory(processorList, memory, processorNumber, address)
+        print("Ningun procesador tiene el dato valido, se va a leer de memoria")
+
+    def readMOESIMemory(self,processorList, memory, processorNumber, address):
+        memoryReadData = memory.getMemBlock(address)
+        processorList[processorNumber].updateCache(address,memoryReadData,"E")
+        processorList[processorNumber].addNewLog(f"El P{processorNumber} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
+        print("Leyo memoria")
+
 
     """def validateMOESI(self,instruction, listaProcesadores, memoria):
         processorNumber = int(instruction[0][-1])-1
@@ -283,6 +384,8 @@ class Ventana:
             lista_procesadores[pNumber].getRandomInstruction()
 
             #calls the invalidation protocol
+            self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(), lista_procesadores, memoria)
+
             #self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(),lista_procesadores,memoria)
 
 
