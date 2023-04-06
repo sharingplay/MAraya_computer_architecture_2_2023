@@ -30,7 +30,7 @@ class Processor:
         self.number = number
         self.currentOperation = []
         #address, value, state
-        self.cache = ["0000","0x0000","I"],["0001","0x0000","I"],["0010","0x0000","I"], ["0011","0x0000","I"]
+        self.cache = ["0000","0x0000","I"],["0010","0x0000","I"],["0001","0x0000","I"], ["0011","0x0000","I"]
 
 
     # assigns possible instructions to a processor
@@ -104,7 +104,7 @@ class Processor:
                 self.cache[offset+1][2] = state
 
             # Checks shared blocks
-            if "S" in self.cache[offset]:
+            elif "S" in self.cache[offset]:
                 self.cache[offset][0] = address
                 self.cache[offset][1] = value
                 self.cache[offset][2] = state
