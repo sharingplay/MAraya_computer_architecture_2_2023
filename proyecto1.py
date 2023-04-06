@@ -6,13 +6,13 @@ import secrets
 class Memory:
     def __init__(self):
         self.blocks = {"000": "0x0000",
-                       "001": "0x0000",
-                       "010": "0x0000",
-                       "011": "0x0000",
-                       "100": "0x0000",
-                       "101": "0x0000",
-                       "110": "0x0000",
-                       "111": "0x0000"}
+                       "001": "0x0045",
+                       "010": "0x010a",
+                       "011": "0x12af",
+                       "100": "0x54ea",
+                       "101": "0xe213",
+                       "110": "0xffaa",
+                       "111": "0xfeaa"}
 
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
@@ -30,7 +30,7 @@ class Processor:
         self.number = number
         self.currentOperation = []
         #address, value, state
-        self.cache = ["000","0x0000","I"],["001","0x0000","I"],["010","0x0000","I"], ["011","0x0000","I"]
+        self.cache = ["0000","0x0000","I"],["0001","0x0000","I"],["0010","0x0000","I"], ["0011","0x0000","I"]
 
 
     # assigns possible instructions to a processor
@@ -147,7 +147,6 @@ class Processor:
                 self.cache[offset+1][1] = value
                 self.cache[offset+1][2] = state
 
-
     def getCache(self):
         return self.cache
 
@@ -166,15 +165,28 @@ class Processor:
 
 class Ventana:
     def __init__(self, master, modo):
+
         self.currentOperations = {1: "",
                                   2: "",
                                   3: "",
                                   4: ""}
-        self.pause = False
+        self.currentHitMiss = {1: "",
+                               2: "",
+                               3: "",
+                               4: ""}
+        self.pause = True
         self.lock = threading.Lock() #lock pause asset
 
         self.master = master
         self.modoActual = modo
+
+        # establece el tamaño de la ventana
+        self.master.geometry("900x550")
+
+        # establece la posición de la ventana
+        self.master.geometry("+{}+{}".format(350, 150))
+        self.master.resizable(False, False)
+
 
         # creates 4 text boxes for the processors
         self.text_box1 = tk.Text(self.master, height=11, width=30)
@@ -219,25 +231,28 @@ class Ventana:
 
     # Determines what operation was done and applies MOESI
     def validateMOESI(self,instruction, processorList, memory):
-        processorNumber = int(instruction[0][-1])
+        processorNumber = int(instruction[0][-1]) - 1
         request = instruction[1]
-
+        print(f"Instruccion: {instruction}")
         try:
             address = instruction[2]
+
+        except IndexError:
+            address = ""
+        try:
             value = instruction[3]
         except IndexError:
-            address = ''
-            value = ''
+            value = ""
 
         print(instruction)
         if request == "READ":
-            print(f"Se quiere hacer un read del P{processorNumber + 1}")
+            print(f"Se quiere hacer un read del P{processorNumber}")
             self.readMOESI(processorList,memory, processorNumber, address)
 
         elif request == "WRITE":
-            print(f"Se quiere hacer un write del P{processorNumber + 1}")
+            print(f"Se quiere hacer un write del P{processorNumber}")
         else:
-            print(f"El P{processorNumber + 1} hace un calc")
+            print(f"El P{processorNumber} hace un calc")
 
     #checks if the data is in the processor cache
     def readMOESI(self, processorList, memory, processorNumber, address):
@@ -297,85 +312,6 @@ class Ventana:
         print("Leyo memoria")
 
 
-    """def validateMOESI(self,instruction, listaProcesadores, memoria):
-        processorNumber = int(instruction[0][-1])-1
-        request = instruction[1]
-        processorCache = listaProcesadores[processorNumber].getCache()
-        print(f"Cache del procesador: {processorCache}")
-
-        #handles exceptions for instructions that are not a write
-        try:
-            address = instruction[2]
-            value = instruction[3]
-        except IndexError:
-            address = ''
-            value = ''
-
-        def readMOESI():
-            for bloque in processorCache:  # checks the cache states to see if it has to go to memory
-                print(f"Revisando bloque de cache: {bloque}")
-
-                #checks is the address is in the cache of the processor
-                if address in bloque:
-                    if bloque[2] == "M" or "S" or "E":
-                        listaProcesadores[processorNumber].setHitMiss("Hit")
-                        listaProcesadores[processorNumber].addNewLog(f"El valor de {bloque[0]} estaba en cache y se volvio a leer")
-                        print("Se hace un read en cache")
-
-        if request == "READ":
-            for bloque in processorCache:  # checks the cache states to see if it has to go to memory
-                print(f"Revisando bloque de cache: {bloque}")
-
-                #checks is the address is in the cache of the processor
-                if address in bloque:
-                    if bloque[2] == "M" or "S" or "E":
-                        listaProcesadores[processorNumber].setHitMiss("Hit")
-                        listaProcesadores[processorNumber].addNewLog(f"El valor de {bloque[0]} estaba en cache y se volvio a leer")
-                        print("Se hace un read en cache")
-
-
-                else:
-                    listaProcesadores[processorNumber].setHitMiss("Miss")
-                    listaProcesadores[processorNumber].addNewLog(f"Hubo Miss, no se encontro el valor en el cache de P{processorNumber}")
-                    print("Hay que leer los demas caches")
-
-                    #Checks if the value is valid in other processors
-                    for procesador in listaProcesadores:
-                        if address in procesador.getCacheStates() and procesador.getCacheState(address) != "I":
-                            if procesador.getCacheState(address) == "E":
-                                # Updates state of the processor to S
-                                listaProcesadores[processorNumber].updateCache(address,procesador.getCacheBlockValue(address),"S")
-                                print(f"El procesador {processorNumber} tenia el dato que buscaba y estaba en E")
-
-                                #Updates E state to S of the processor that was read
-                                procesador.updateCache(address,procesador.getCacheBlockValue(address), "S")
-                                procesador.addNewLog(f"El P{processorNumber} leyo la direccion {address} de "
-                                                     f"P{procesador.getNumber()}y se cambio de E a S")
-
-
-                            elif procesador.getCacheState(address) == "M":
-                                # Updates state of the processor to S
-                                listaProcesadores[processorNumber].updateCache(address,procesador.getCacheBlockValue(address),"S")
-                                print(f"El procesador {processorNumber} tenia el dato que buscaba y estaba en M")
-
-                                # Updates M state to O of the processor that was read
-                                procesador.updateCache(address, procesador.getCacheBlockValue(address), "M")
-                                procesador.addNewLog(f"El P{processorNumber} leyo la direccion {address} de "
-                                                     f"P {procesador.getNumber()}y se cambio de M a O")
-
-
-                            else: # Case where the state was S or O stays the same
-                                listaProcesadores[processorNumber].updateCache(address,procesador.getCacheBlockValue(address),"S")
-                                listaProcesadores[processorNumber].addNewLog(f"Se leyo el dato del P{procesador.getNumber()}")
-
-                        else:
-                            print(f"El procesador {processorNumber} no tiene la direccion que quiere leer o es Invalida")
-                    #Buscar en memoria el dato***************************
-                    print("No esta en cache el dato hay que ir a buscarlo a memoria")
-
-        #elif request == "WRITE":
-
-        #else: #Calc request"""
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
         def newOperationRandProcessor(): # selects a random processor to give a random instruction
@@ -386,12 +322,10 @@ class Ventana:
             #calls the invalidation protocol
             self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(), lista_procesadores, memoria)
 
-            #self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(),lista_procesadores,memoria)
-
 
         with self.lock:
             if self.pause == False:
-                newOperationRandProcessor()
+                #newOperationRandProcessor()
                 print("Se actualiza")
                 #Iterates processors text boxes
                 for i, procesador in enumerate(lista_procesadores):
@@ -423,11 +357,12 @@ class Ventana:
 
                     # Keeps the operations done by the processors updated
                     self.currentOperations[i+1] = procesador.getCurrentOperation()
+                    self.currentHitMiss[i+1] = procesador.getHitMiss()
 
                 # Writes the actions done by the processors
                 self.text_box_info.delete(1.0,tk.END)
                 for key, value in self.currentOperations.items():  #Cache values
-                    self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n\n")
+                    self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
 
                 #Updates the memory on screen
                 self.text_box_memory.delete(1.0, tk.END)
@@ -445,7 +380,6 @@ class Ventana:
         if modo == 1:
             self.actualizar(lista_procesadores,memoria)
             self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
-            self.updateProcessor(lista_procesadores[0])
             # inicia el bucle de eventos
             self.master.mainloop()
 
@@ -470,10 +404,25 @@ def main():
     p3 = Processor(3)
     p4 = Processor(4)
 
-    p1.updateCache("000","0x0123","M")
-    p2.updateCache("000","0x1abc","I")
-    p3.updateCache("000","0x2ca4","S")
-    p4.updateCache("000","0xf102","O")
+    p1.updateCache("0001", "0x1fa2", "I")
+    p1.updateCache("0010", "0xfae2", "M")
+    p1.updateCache("0011", "0x1234", "E")
+    p1.updateCache("0100", "0xf2e3", "S")
+
+    p2.updateCache("0001", "0x1023", "S")
+    p2.updateCache("0010", "0xaaaa", "I")
+    p2.updateCache("0101", "0x4321", "E")
+    p2.updateCache("0100", "0xf2e3", "S")
+
+    p3.updateCache("0001", "0x1023", "S")
+    p3.updateCache("0010", "0xaaaa", "I")
+    p3.updateCache("0011", "0xef23", "M")
+    p3.updateCache("0100", "0xf2e3", "S")
+
+    p4.updateCache("0001", "0x1023", "O")
+    p4.updateCache("0110", "0xfae2", "S")
+    p4.updateCache("0101", "0x1023", "I")
+    p4.updateCache("0111", "0x1023", "I")
 
     #Processors list
     processors = [p1,p2,p3,p4]
