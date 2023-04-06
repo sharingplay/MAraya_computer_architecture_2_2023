@@ -30,7 +30,7 @@ class Processor:
         self.number = number
         self.currentOperation = []
         #address, value, state
-        self.cache = ["0000","0x0000","I"],["0010","0x0000","I"],["0001","0x0000","I"], ["0011","0x0000","I"]
+        self.cache = ["000","0x0000","I"],["010","0x0000","I"],["001","0x0000","I"], ["011","0x0000","I"]
 
 
     # assigns possible instructions to a processor
@@ -84,7 +84,6 @@ class Processor:
         else:
             set = int(address) % 2 #gets the set with a 2 way set logic
             # gets the address of the blocks in set 0
-            print(f"Cache viejo: {self.cache}")
 
             #checks the blocks of the specific set
             if set == 0:
@@ -161,6 +160,7 @@ class Processor:
 
     def getHitMiss(self):
         return self.hitMiss
+
 
 
 class Ventana:
@@ -246,7 +246,7 @@ class Ventana:
 
         print(instruction)
         if request == "READ":
-            print(f"Se quiere hacer un read del P{processorNumber}")
+            print(f"Se quiere hacer un read del P{processorNumber+1}")
             self.readMOESI(processorList,memory, processorNumber, address)
 
         elif request == "WRITE":
@@ -325,7 +325,7 @@ class Ventana:
 
         with self.lock:
             if self.pause == False:
-                #newOperationRandProcessor()
+                newOperationRandProcessor()
                 print("Se actualiza")
                 #Iterates processors text boxes
                 for i, procesador in enumerate(lista_procesadores):
@@ -404,25 +404,25 @@ def main():
     p3 = Processor(3)
     p4 = Processor(4)
 
-    p1.updateCache("0001", "0x1fa2", "I")
-    p1.updateCache("0010", "0xfae2", "M")
-    p1.updateCache("0011", "0x1234", "E")
-    p1.updateCache("0100", "0xf2e3", "S")
+    p1.updateCache("001", "0x1fa2", "I")
+    p1.updateCache("010", "0xfae2", "M")
+    p1.updateCache("011", "0x1234", "E")
+    p1.updateCache("100", "0xf2e3", "S")
 
-    p2.updateCache("0001", "0x1023", "S")
-    p2.updateCache("0010", "0xaaaa", "I")
-    p2.updateCache("0101", "0x4321", "E")
-    p2.updateCache("0100", "0xf2e3", "S")
+    p2.updateCache("001", "0x1023", "S")
+    p2.updateCache("010", "0xaaaa", "I")
+    p2.updateCache("101", "0x4321", "E")
+    p2.updateCache("100", "0xf2e3", "S")
 
-    p3.updateCache("0001", "0x1023", "S")
-    p3.updateCache("0010", "0xaaaa", "I")
-    p3.updateCache("0011", "0xef23", "M")
-    p3.updateCache("0100", "0xf2e3", "S")
+    p3.updateCache("001", "0x1023", "S")
+    p3.updateCache("010", "0xaaaa", "I")
+    p3.updateCache("011", "0xef23", "M")
+    p3.updateCache("100", "0xf2e3", "S")
 
-    p4.updateCache("0001", "0x1023", "O")
-    p4.updateCache("0110", "0xfae2", "S")
-    p4.updateCache("0101", "0x1023", "I")
-    p4.updateCache("0111", "0x1023", "I")
+    p4.updateCache("001", "0x1023", "O")
+    p4.updateCache("110", "0xfae2", "S")
+    p4.updateCache("101", "0x1023", "I")
+    p4.updateCache("111", "0x1023", "I")
 
     #Processors list
     processors = [p1,p2,p3,p4]
