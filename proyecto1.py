@@ -1,5 +1,6 @@
 import threading
 import tkinter as tk
+from tkinter import ttk
 import random
 import secrets
 
@@ -62,6 +63,7 @@ class Processor:
             self.currentOperation = ["P" + str(self.number),"CALC"]
             self.logs += "\n" + str(self.currentOperation)
             print(self.logs)
+
 
     def getlogs(self):
         return self.logs
@@ -162,7 +164,6 @@ class Processor:
         return self.hitMiss
 
 
-
 class Ventana:
     def __init__(self, master, modo):
 
@@ -216,11 +217,17 @@ class Ventana:
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
         self.boton_pause.grid(row=2, column=1, padx=10, pady=10)
 
-        self.boton3 = tk.Button(self.master, text="Boton 3")
+        self.boton3 = tk.Button(self.master, text="new instruction", command = lambda: self.openInputWindow())
         self.boton3.grid(row=2, column=2, padx=10, pady=10)
 
         self.boton4 = tk.Button(self.master, text="Boton 4")
         self.boton4.grid(row=2, column=3, padx=10, pady=10)
+
+    def openInputWindow(self):
+        inputWindow = InputWindow()
+        inputWindow.wait_window()
+        result = inputWindow.result
+        print(result)
 
     def changePause(self):
         with self.lock: #adquire pause lock
@@ -385,6 +392,68 @@ class Ventana:
 
         #agregar el cambio a paso a paso***************************************** con un else
 
+
+class InputWindow(tk.Toplevel):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.title("Instruction Input")
+        self.geometry("275x175")
+        self.resizable(False, False)
+
+        self.processorNumber = tk.StringVar(self)
+        self.operation = tk.StringVar(self)
+        self.address = tk.StringVar(self)
+        self.value = tk.StringVar(self)
+
+        # Processor number input label
+        first_label = ttk.Label(self, text="Processor Number:", padding=(5,5))
+        first_label.grid(row=0, column=0)
+        self.first_combobox = ttk.Combobox(self, values=["P1", "P2", "P3", "P4"], textvariable=self.processorNumber)
+        self.first_combobox.grid(row=0, column=1)
+
+        # Instruction input label
+        second_label = ttk.Label(self, text="Instruction:",padding=(5,5))
+        second_label.grid(row=1, column=0)
+        self.second_combobox = ttk.Combobox(self, values=["READ", "WRITE", "CALC"], textvariable=self.operation)
+        self.second_combobox.grid(row=1, column=1)
+
+        # Address input label
+        third_label = ttk.Label(self, text="address:", padding=(5,5))
+        third_label.grid(row=2, column=0)
+        self.third_combobox = ttk.Combobox(self, values=["000", "001", "010", "011", "100", "101", "110", "111"], textvariable=self.address)
+        self.third_combobox.grid(row=2, column=1)
+
+        # Value input label
+        fourth_label = ttk.Label(self, text="Hex value:", padding=(5,5))
+        fourth_label.grid(row=3, column=0)
+        self.fourth_entry = ttk.Entry(self, textvariable=self.value)
+        self.fourth_entry.grid(row=3, column=1)
+
+        # Botón para guardar los datos ingresados y cerrar la ventana
+        save_button = ttk.Button(self, text="Guardar", command=self.save_data, padding=(0,5))
+        save_button.grid(row=4, column=0)
+
+        # Botón para cancelar y cerrar la ventana
+        cancel_button = ttk.Button(self, text="Cancelar", command=self.destroy, padding=(5,5))
+        cancel_button.grid(row=4, column=1)
+
+        # Centrar la ventana en la pantalla
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+    def save_data(self):
+        # Obtener los datos ingresados y devolverlos como una tupla
+        number = self.processorNumber.get()
+        instruction = self.operation.get()
+        address = self.address.get() if self.address.get() else ""
+        value = self.value.get() if self.value.get() else ""
+        self.result = [number,instruction,address,value]
+        print(self.result)
+        self.destroy()
 
 def main():
     #validates execution mode
