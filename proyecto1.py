@@ -5,14 +5,14 @@ import secrets
 
 class Memory:
     def __init__(self):
-        self.blocks = {"000": 0,
-                       "001": 0,
-                       "010": 0,
-                       "011": 0,
-                       "100": 0,
-                       "101": 0,
-                       "110": 0,
-                       "111": 0}
+        self.blocks = {"000": "0x0000",
+                       "001": "0x0000",
+                       "010": "0x0000",
+                       "011": "0x0000",
+                       "100": "0x0000",
+                       "101": "0x0000",
+                       "110": "0x0000",
+                       "111": "0x0000"}
 
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
@@ -29,14 +29,9 @@ class Processor:
         self.hitMiss = ""
         self.number = number
         self.currentOperation = []
-        self.cache = {"000": 0,
-                      "001": 0,
-                      "010": 0,
-                      "011": 0}
-        self.cacheStates = {"000": 'I',
-                            "001": 'I',
-                            "010": 'I',
-                            "011": 'I'}
+        #address, value, state
+        self.cache = ["000","0x0000","I"],["001","0x0000","I"],["010","0x0000","I"], ["011","0x0000","I"]
+
 
     # assigns possible instructions to a processor
     def getRandomInstruction(self):
@@ -77,50 +72,49 @@ class Processor:
     def getCurrentOperation(self):
         return self.currentOperation
 
-    def updateBlockState(self,block,state):
-        self.cacheStates[block] = state
 
 
     def updateCache(self,address,value,state): #validates the 2 way set in case a block needs to be changed
         #If the block is in the cache, just overwrite it
-        if address in self.cache:
-            self.cache[address] = value
-            self.cacheStates[address] = state
+        for i, block in enumerate(self.cache):
+            if self.cache[i][0] == address:
+                self.cache[i][1] = value
+                self.cache[i][2] = state
+                return
 
-        #determines in which block it should be writen in case there is no invalid block ******************
+        #determines in which block it should be writen in case there is no invalid block
         else:
             set = int(address) % 2 #gets the set with a 2 way set logic
             # gets the address of the blocks in set 0
-            block1 = self.getCacheStates()[0]
-            block2 = self.getCacheStates()[1]
-            # gets the address of the blocks in set 1
-            block3 = self.getCacheStates()[2]
-            block4 = self.getCacheStates()[3]
+            print(f"Cache viejo: {self.cache}")
 
             #checks the blocks of the specific set
             if set == 0:
-                blockA = block1
-                blockB = block2
+                offset = 0
             else:
-                blockA = block3
-                blockB = block4
+                offset = 2
 
-            # Checks invalid blocks
-            if "I" in blockA or "I" in blockB:
-                self.cache[address] = value
-                self.cacheStates[address] = state
-
-            # Checks shared blocks
-            elif "S" in blockA or "S" in blockB:
-                self.cache[address] = value
-                self.cacheStates[address] = state
-
-            # Checks Exclusive blocks
-            elif "O" in blockA or "O" in blockB:
-                self.cache[address] = value
-                self.cacheStates[address] = state
-
-
+            for i in range(0+offset,2+offset):
+                # Checks invalid blocks
+                if "I" in self.cache[i]:
+                    self.cache[i] = [address,value,state]
+                    return
+                # Checks shared blocks
+                elif "S" in self.cache[i]:
+                    self.cache[i] = [address,value,state]
+                    return
+                # Checks Exclusive blocks
+                elif "E" in self.cache[i]:
+                    self.cache[i] = [address, value, state]
+                    return
+                # Checks Owned blocks
+                elif "O" in self.cache[i]:
+                    self.cache[i] = [address,value,state]
+                    return
+                #C CHeks Modified blocks
+                elif "M" in self.cache[i]:
+                    self.cache[i] = [address,value,state]
+                    return
 
 
     def getCache(self):
@@ -128,12 +122,6 @@ class Processor:
 
     def getCacheBlockValue(self,cacheBlock):
         return self.cache[cacheBlock]
-
-    def getCacheStates(self):
-        return self.cacheStates
-
-    def getCacheState(self,cacheBlock):
-        return self.cacheStates[cacheBlock]
 
     def getNumber(self):
         return self.number
@@ -144,8 +132,6 @@ class Processor:
     def getHitMiss(self):
         return self.hitMiss
 
-    def invalidateBlock(self,block):
-        self.cacheStates[block] = "I"
 
 class Ventana:
     def __init__(self, master, modo):
@@ -197,11 +183,11 @@ class Ventana:
         with self.lock: #adquire pause lock
             self.pause = not self.pause
 
-    def validateMOESI(self,instruction, listaProcesadores, memoria):
+    """def validateMOESI(self,instruction, listaProcesadores, memoria):
         processorNumber = int(instruction[0][-1])-1
         request = instruction[1]
-        processorCacheValues = listaProcesadores[processorNumber].getCache()
-        processorCacheStates = listaProcesadores[processorNumber].getCacheStates()
+        processorCache = listaProcesadores[processorNumber].getCache()
+        print(f"Cache del procesador: {processorCache}")
 
         #handles exceptions for instructions that are not a write
         try:
@@ -211,18 +197,29 @@ class Ventana:
             address = ''
             value = ''
 
-        if request == "READ":
-            for key, value in processorCacheStates.items():  # checks the cache states to see if it has to go to memory
-                print(f"Key {key} address: {address}")
+        def readMOESI():
+            for bloque in processorCache:  # checks the cache states to see if it has to go to memory
+                print(f"Revisando bloque de cache: {bloque}")
 
                 #checks is the address is in the cache of the processor
-                if address == key:
-                    if value == "M" or "S" or "E":
+                if address in bloque:
+                    if bloque[2] == "M" or "S" or "E":
                         listaProcesadores[processorNumber].setHitMiss("Hit")
-                        listaProcesadores[processorNumber].addNewLog(f"El valor de {address} estaba en cache y se volvio a leer")
+                        listaProcesadores[processorNumber].addNewLog(f"El valor de {bloque[0]} estaba en cache y se volvio a leer")
                         print("Se hace un read en cache")
-                        print(f"valores cache: {processorCacheValues}")
-                        print(f"estados cache: {processorCacheStates}")
+
+        if request == "READ":
+            for bloque in processorCache:  # checks the cache states to see if it has to go to memory
+                print(f"Revisando bloque de cache: {bloque}")
+
+                #checks is the address is in the cache of the processor
+                if address in bloque:
+                    if bloque[2] == "M" or "S" or "E":
+                        listaProcesadores[processorNumber].setHitMiss("Hit")
+                        listaProcesadores[processorNumber].addNewLog(f"El valor de {bloque[0]} estaba en cache y se volvio a leer")
+                        print("Se hace un read en cache")
+
+
                 else:
                     listaProcesadores[processorNumber].setHitMiss("Miss")
                     listaProcesadores[processorNumber].addNewLog(f"Hubo Miss, no se encontro el valor en el cache de P{processorNumber}")
@@ -260,17 +257,11 @@ class Ventana:
                         else:
                             print(f"El procesador {processorNumber} no tiene la direccion que quiere leer o es Invalida")
                     #Buscar en memoria el dato***************************
+                    print("No esta en cache el dato hay que ir a buscarlo a memoria")
 
         #elif request == "WRITE":
 
-        #else: #Calc request
-
-        print("Validar MOESI")
-        print(f"instruccion: {instruction}")
-        print(f"procesadores: {listaProcesadores[0].getCache()}")
-        print(f"memoria: {memoria}")
-
-
+        #else: #Calc request"""
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
         def newOperationRandProcessor(): # selects a random processor to give a random instruction
@@ -279,7 +270,7 @@ class Ventana:
             lista_procesadores[pNumber].getRandomInstruction()
 
             #calls the invalidation protocol
-            self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(),lista_procesadores,memoria)
+            #self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(),lista_procesadores,memoria)
 
 
         with self.lock:
@@ -297,24 +288,27 @@ class Ventana:
                     elif i == 3:
                         textBox = self.text_box4
 
-                    #Clean the text box
+                    # Clean the text box
                     textBox.delete(1.0, tk.END)
 
-                    #Updates cache data for each processor
+                    # Updates cache values for each processor
                     textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
                     textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n","center")
-                    for key,value in procesador.getCache().items(): #Cache values
-                        textBox.insert('end', f"{key}: {value}\n")
 
+                    for bloque in procesador.getCache(): #Cache values
+                        textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
+
+                    # Updates cache states for each processor
                     textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
                     textBox.insert('end', f"State of the cache blocks:\n","center")
-                    for key,value in lista_procesadores[i].getCacheStates().items(): #Cache states
-                        textBox.insert('end', f"{key}: {value}\n")
 
-                    #Keeps the operations done by the processors updated
+                    for bloque in procesador.getCache(): #Cache states
+                        textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
+
+                    # Keeps the operations done by the processors updated
                     self.currentOperations[i+1] = procesador.getCurrentOperation()
 
-                #Writes the actions done by the processors
+                # Writes the actions done by the processors
                 self.text_box_info.delete(1.0,tk.END)
                 for key, value in self.currentOperations.items():  #Cache values
                     self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n\n")
@@ -358,6 +352,11 @@ def main():
     p2 = Processor(2)
     p3 = Processor(3)
     p4 = Processor(4)
+
+    p1.updateCache("000","0x0123","M")
+    p2.updateCache("000","0x1abc","I")
+    p3.updateCache("000","0x2ca4","S")
+    p4.updateCache("000","0xf102","O")
 
     #Processors list
     processors = [p1,p2,p3,p4]
