@@ -1,10 +1,20 @@
 import threading
 import tkinter as tk
+from tkinter import ttk
 import random
 import secrets
 
 class Memory:
     def __init__(self):
+        self.blocks = {"000": "0xffff",
+                       "001": "0xffff",
+                       "010": "0xffff",
+                       "011": "0xffff",
+                       "100": "0xffff",
+                       "101": "0xffff",
+                       "110": "0xffff",
+                       "111": "0xffff"}
+        """
         self.blocks = {"000": "0x0000",
                        "001": "0x0045",
                        "010": "0x010a",
@@ -13,7 +23,7 @@ class Memory:
                        "101": "0xe213",
                        "110": "0xffaa",
                        "111": "0xfeaa"}
-
+        """
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
 
@@ -62,6 +72,7 @@ class Processor:
             self.currentOperation = ["P" + str(self.number),"CALC"]
             self.logs += "\n" + str(self.currentOperation)
             print(self.logs)
+
 
     def getlogs(self):
         return self.logs
@@ -162,7 +173,6 @@ class Processor:
         return self.hitMiss
 
 
-
 class Ventana:
     def __init__(self, master, modo):
 
@@ -170,10 +180,14 @@ class Ventana:
                                   2: "",
                                   3: "",
                                   4: ""}
+
         self.currentHitMiss = {1: "",
                                2: "",
                                3: "",
                                4: ""}
+
+        self.inputOperation = ""
+
         self.pause = True
         self.lock = threading.Lock() #lock pause asset
 
@@ -216,11 +230,21 @@ class Ventana:
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
         self.boton_pause.grid(row=2, column=1, padx=10, pady=10)
 
-        self.boton3 = tk.Button(self.master, text="Boton 3")
+        self.boton3 = tk.Button(self.master, text="new instruction", command = lambda: self.openInputWindow())
         self.boton3.grid(row=2, column=2, padx=10, pady=10)
 
         self.boton4 = tk.Button(self.master, text="Boton 4")
         self.boton4.grid(row=2, column=3, padx=10, pady=10)
+
+    def openInputWindow(self):
+        if self.pause == True:
+            inputWindow = InputWindow()
+            inputWindow.wait_window()
+
+            print(f"Operacion desde la ventana {self.inputOperation}")
+
+        else:
+            print("No se puede ingresar una operacion si no esta pausada la ejecucion")
 
     def changePause(self):
         with self.lock: #adquire pause lock
@@ -250,9 +274,9 @@ class Ventana:
             self.readMOESI(processorList,memory, processorNumber, address)
 
         elif request == "WRITE":
-            print(f"Se quiere hacer un write del P{processorNumber}")
+            print(f"Se quiere hacer un write del P{processorNumber + 1}")
         else:
-            print(f"El P{processorNumber} hace un calc")
+            print(f"El P{processorNumber + 1} hace un calc")
 
     #checks if the data is in the processor cache
     def readMOESI(self, processorList, memory, processorNumber, address):
@@ -311,7 +335,21 @@ class Ventana:
         processorList[processorNumber].addNewLog(f"El P{processorNumber} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
         print("Leyo memoria")
 
-
+    def writeMOESI(self, processorList, memory, processorNumber, address):
+        if address in processorList[processorNumber].getCache():
+            for block in processorList[processorNumber].getCache():
+                # If it has the address, writes on it
+                if block[0] == address:
+                    #if its modified, stays the same after updating it
+                    if block[2] == "M":
+                        processorList[processorNumber].setHitMiss("Hit")
+                        #processorList[processorNumber].updateCache(address,value,state)
+                        processorList[processorNumber].addNewLog(f"Es un Hit y se escribe en {address} el valor {block[1]}")
+                        return
+                    else:
+                        processorList[processorNumber].setHitMiss("Miss")
+                        processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
+                        self.readMOESIProcessors(processorList, memory, processorNumber, address)
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
         def newOperationRandProcessor(): # selects a random processor to give a random instruction
@@ -385,6 +423,93 @@ class Ventana:
 
         #agregar el cambio a paso a paso***************************************** con un else
 
+
+class InputWindow(tk.Toplevel):
+    def __init__(self, master = None):
+        super().__init__(master)
+        self.title("Instruction Input")
+        self.geometry("275x175")
+        self.resizable(False, False)
+
+        self.result = ""
+
+        self.processorNumber = tk.StringVar(self)
+        self.operation = tk.StringVar(self)
+        self.address = tk.StringVar(self)
+        self.value = tk.StringVar(self)
+
+        # Processor number input label
+        first_label = ttk.Label(self, text="Processor Number:", padding=(5,5))
+        first_label.grid(row=0, column=0)
+        self.first_combobox = ttk.Combobox(self, values=["P1", "P2", "P3", "P4"], textvariable=self.processorNumber)
+        self.first_combobox.grid(row=0, column=1)
+
+        # Instruction input label
+        second_label = ttk.Label(self, text="Instruction:",padding=(5,5))
+        second_label.grid(row=1, column=0)
+        self.second_combobox = ttk.Combobox(self, values=["READ", "WRITE", "CALC"], textvariable=self.operation)
+        self.second_combobox.grid(row=1, column=1)
+        self.second_combobox.bind("<<ComboboxSelected>>", self.update_input_fields)
+
+        # Address input label
+        third_label = ttk.Label(self, text="address:", padding=(5,5))
+        third_label.grid(row=2, column=0)
+        self.third_combobox = ttk.Combobox(self, values=["000", "001", "010", "011", "100", "101", "110", "111"], textvariable=self.address)
+        self.third_combobox.grid(row=2, column=1)
+
+        # Value input label
+        fourth_label = ttk.Label(self, text="Hex value:", padding=(5,5))
+        fourth_label.grid(row=3, column=0)
+        self.fourth_entry = ttk.Entry(self, textvariable=self.value)
+        self.fourth_entry.grid(row=3, column=1)
+
+        # Botón para guardar los datos ingresados y cerrar la ventana
+        save_button = ttk.Button(self, text="Guardar", command=self.save_data, padding=(0,5))
+        save_button.grid(row=4, column=0)
+
+        # Botón para cancelar y cerrar la ventana
+        cancel_button = ttk.Button(self, text="Cancelar", command=self.destroy, padding=(5,5))
+        cancel_button.grid(row=4, column=1)
+
+        # Centrar la ventana en la pantalla
+        self.update_idletasks()
+        width = self.winfo_width()
+        height = self.winfo_height()
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+    def save_data(self):
+        # Returns input data
+        number = self.processorNumber.get()
+        instruction = self.operation.get()
+        address = self.address.get()
+        value = self.value.get()
+
+        self.result = [number,instruction,address,value]
+
+        if self.result[1] == "READ":
+            self.result.pop()
+        elif self.result[1] == "CALC":
+            del self.result[-2:]
+
+        self.master.inputOperation = self.result
+        print(f"Resultado desde el input window {self.result}")
+        self.destroy()
+
+    def update_input_fields(self, event):
+        # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
+        if self.operation.get() == "CALC":
+            self.third_combobox.state(["disabled"])
+            self.fourth_entry.state(["disabled"])
+
+        elif self.operation.get() == "READ":
+            self.fourth_entry.state(["disabled"])
+            self.third_combobox.state(["!disabled"])
+
+        else:
+            self.third_combobox.state(["!disabled"])
+            self.fourth_entry.state(["!disabled"])
 
 def main():
     #validates execution mode
