@@ -240,8 +240,7 @@ class Ventana:
         if self.pause == True:
             inputWindow = InputWindow()
             inputWindow.wait_window()
-            self.master.wait_window(inputWindow.top)
-            self.inputOperation = inputWindow.result
+
             print(f"Operacion desde la ventana {self.inputOperation}")
 
         else:
@@ -336,7 +335,21 @@ class Ventana:
         processorList[processorNumber].addNewLog(f"El P{processorNumber} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
         print("Leyo memoria")
 
-
+    def writeMOESI(self, processorList, memory, processorNumber, address):
+        if address in processorList[processorNumber].getCache():
+            for block in processorList[processorNumber].getCache():
+                # If it has the address, writes on it
+                if block[0] == address:
+                    #if its modified, stays the same after updating it
+                    if block[2] == "M":
+                        processorList[processorNumber].setHitMiss("Hit")
+                        #processorList[processorNumber].updateCache(address,value,state)
+                        processorList[processorNumber].addNewLog(f"Es un Hit y se escribe en {address} el valor {block[1]}")
+                        return
+                    else:
+                        processorList[processorNumber].setHitMiss("Miss")
+                        processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
+                        self.readMOESIProcessors(processorList, memory, processorNumber, address)
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
         def newOperationRandProcessor(): # selects a random processor to give a random instruction
@@ -480,6 +493,7 @@ class InputWindow(tk.Toplevel):
         elif self.result[1] == "CALC":
             del self.result[-2:]
 
+        self.master.inputOperation = self.result
         print(f"Resultado desde el input window {self.result}")
         self.destroy()
 
