@@ -246,7 +246,8 @@ class Ventana:
     def openInputWindow(self):
         if self.pause == True:
             inputWindow = InputWindow()
-            inputWindow.wait_window()
+            self.master.wait_window(inputWindow)
+            self.inputOperation = inputWindow.result
 
             print(f"Operacion desde la ventana {self.inputOperation}")
 
