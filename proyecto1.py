@@ -56,7 +56,7 @@ class Processor:
         randomNumber = random.uniform(0.1,1)
 
         # 30% chance of getting a write instruction
-        if randomNumber < 0.3:
+        if randomNumber < -0.3:
             # return the processor number, the block number in binary and the hex value to write
             self.currentOperation = ["P" + str(self.number),"WRITE",randomBin(),randomHex()]
             self.logs += "\n" + str(self.currentOperation)
@@ -79,6 +79,7 @@ class Processor:
 
     def addNewLog(self,log):
         self.logs += "\n"+log
+        print(self.logs)
 
     def getCurrentOperation(self):
         return self.currentOperation
@@ -182,7 +183,6 @@ class Processor:
 
 class Ventana:
     def __init__(self, master, modo):
-
         self.currentOperations = {1: "", 2: "", 3: "", 4: ""}
         self.currentHitMiss = {1: "", 2: "", 3: "", 4: ""}
 
@@ -200,8 +200,9 @@ class Ventana:
         # window settings
         self.master = master
         self.modoActual = modo
-        self.master.geometry("1100x550+350+150")
+        self.master.geometry("1100x550+200+150")
         self.master.resizable(False, False)
+
 
 
         # creates 4 text boxes for the processors
@@ -225,44 +226,44 @@ class Ventana:
         self.text_box_info = tk.Text(self.master, height=12, width=30)
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
+        # creates a text box for processors last logs
+        self.processorsLogs = tk.Text(self.master, height=15, width=35)
+        self.processorsLogs.grid(row=1, column=3, padx=10, pady=10)
+
         # creates the buttons
-
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
-        self.boton_pause.place(x = 850, y = 400)
-
-        self.boton3 = tk.Button(self.master, text="new instruction", command = lambda: self.openInputWindow())
-        self.boton3.grid(row=2, column=2, padx=10, pady=10)
+        self.boton_pause.place(x = 900, y = 205)
 
 
         # Processor number input label and option box
         self.pNumberLabel = ttk.Label(self.master, text="Processor Number:", padding=(5, 5))
-        self.pNumberLabel.place(x=800, y=50)
+        self.pNumberLabel.place(x=800, y=10)
         self.pNumber_combobox = ttk.Combobox(self.master, values=["P1", "P2", "P3", "P4"], textvariable=self.processorNumber, state = 'disabled')
-        self.pNumber_combobox.place(x = 925, y =55)
+        self.pNumber_combobox.place(x = 925, y =15)
 
         # Instruction input label and option box
         self.instructionLabel = ttk.Label(self.master, text="Instruction:", padding=(5, 5))
-        self.instructionLabel.place(x= 840, y=100)
+        self.instructionLabel.place(x= 840, y=60)
         self.instruction_combobox = ttk.Combobox(self.master, values=["READ", "WRITE", "CALC"], textvariable=self.operation, state = 'disabled')
-        self.instruction_combobox.place(x = 925, y = 105)
+        self.instruction_combobox.place(x = 925, y = 65)
         self.instruction_combobox.bind("<<ComboboxSelected>>", self.update_input_fields)
 
         # Address input label and option box
         self.addressLabel = ttk.Label(self.master, text="Address:", padding=(5, 5))
-        self.addressLabel.place(x = 853, y = 150)
+        self.addressLabel.place(x = 853, y = 110)
         self.address_combobox = ttk.Combobox(self.master, values=["000", "001", "010", "011", "100", "101", "110", "111"],
                                            textvariable=self.address, state = 'disabled')
-        self.address_combobox.place(x = 925, y = 155)
+        self.address_combobox.place(x = 925, y = 115)
 
         # Value input label
         self.hex_label = ttk.Label(self.master, text="Hex value:", padding=(5, 5))
-        self.hex_label.place(x = 842, y = 200)
+        self.hex_label.place(x = 842, y = 160)
         self.hex_entry = ttk.Entry(self.master, textvariable=self.value, state = 'disabled')
-        self.hex_entry.place(x = 932, y = 205)
+        self.hex_entry.place(x = 932, y = 165)
 
         # button to store values and call the instruction
         self.save_button = ttk.Button(self.master, text="Guardar", command=self.save_data, padding=(0, 5), state = 'disabled')
-        self.save_button.place(x = 955, y = 250)
+        self.save_button.place(x = 955, y = 200)
 
     def save_data(self):
         # Returns input data
@@ -278,7 +279,6 @@ class Ventana:
         elif self.inputOperation[1] == "CALC":
             del self.inputOperation[-2:]
 
-        print(f"Resultado desde el input window {self.inputOperation}")
 
     def update_input_fields(self, event):
         # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
@@ -306,6 +306,7 @@ class Ventana:
             self.address_combobox.configure(state='normal')
             self.save_button.configure(state='normal')
             self.hex_entry.configure(state='normal')
+            self.modoActual = 2
         else:
             self.save_button.configure(state='disabled')
             self.pNumber_combobox.configure(state='disabled')
@@ -313,6 +314,7 @@ class Ventana:
             self.address_combobox.configure(state='disabled')
             self.save_button.configure(state='disabled')
             self.hex_entry.configure(state='disabled')
+            self.modoActual = 1
 
     def updateProcessor(self,procesador):
         procesador.updateCache("100",str(secrets.token_hex(2)),random.choice(["M","S","O","I","E"]))
@@ -321,10 +323,10 @@ class Ventana:
     def validateMOESI(self,instruction, processorList, memory):
         processorNumber = int(instruction[0][-1]) - 1
         request = instruction[1]
+        processorList[processorNumber].currentOperation = instruction
         print(f"Instruccion: {instruction}")
         try:
             address = instruction[2]
-
         except IndexError:
             address = ""
         try:
@@ -339,24 +341,26 @@ class Ventana:
 
         elif request == "WRITE":
             print(f"Se quiere hacer un write del P{processorNumber + 1}")
-            self.writeMOESI(processorList,memory,processorNumber,address,value)
+            #self.writeMOESI(processorList,memory,processorNumber,address,value)
         else:
             print(f"El P{processorNumber + 1} hace un calc")
 
     #checks if the data is in the processor cache
     def readMOESI(self, processorList, memory, processorNumber, address):
-        if address in processorList[processorNumber].getCache():
-            for block in processorList[processorNumber].getCache():
-                # If it has a valid data value, reads it
-                if block[0] == address:
-                    if block[2] != "I":
-                        processorList[processorNumber].setHitMiss("Hit")
-                        processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {block[1]}")
-                        return
-                    else:
-                        processorList[processorNumber].setHitMiss("Miss")
-                        processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
-                        self.readMOESIProcessors(processorList, memory, processorNumber, address)
+        processorCache = processorList[processorNumber].getCache()
+
+        for block in processorCache:
+            # If it has a valid data value, reads it
+            if block[0] == address:
+                if block[2] != "I":
+                    processorList[processorNumber].setHitMiss("Hit")
+                    processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {block[1]}")
+                    return
+                else:
+                    processorList[processorNumber].setHitMiss("Miss")
+                    processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
+                    self.readMOESIProcessors(processorList, memory, processorNumber, address)
+                    return
         else:
             processorList[processorNumber].setHitMiss("Miss")
             processorList[processorNumber].addNewLog(f"Es un Miss porque {address} no esta en cache")
@@ -364,30 +368,38 @@ class Ventana:
 
     def readMOESIProcessors(self,processorList,memory,processorNumber,address):
         for processor in processorList:
-            if address in processor.getCache():
-                for block in processor.getCache():
-                    if block[0] == address:
-                        # Read the cache of a processor with valid state
-                        if block[2] != "I":
-                            # Updates the cache of both processors
-                            if block[2] == "S" or "O":
-                                processorList[processorNumber].updateCache(block[0],block[1],"S")
-                                processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
-                                return
+            processorCache = processor.getCache()
+            for block in processorCache:
+                if block[0] == address:
+                    # Read the cache of a processor with valid state
+                    if block[2] != "I":
+                        # Updates the cache of both processors
+                        if block[2] == "S":
+                            processorList[processorNumber].updateCache(block[0],block[1],"S")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se mantiene el estado en S")
+                            return
 
-                            elif block[2] == "M":
-                                processorList[processorNumber].updateCache(block[0], block[1], "S")
-                                processor.updateCache(block[0],block[1],"O")
-                                processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
-                                processor.addNewLog(f"El P{processorNumber} leyo {address} con un valor {block[1]}, se cambia el estado de M a O")
-                                return
+                        elif block[2] == "O":
+                            processorList[processorNumber].updateCache(block[0],block[1],"S")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}")
+                            processor.updateCache(block[0],block[1],"S")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de O a S")
+                            return
 
-                            elif block[2] == "E":
-                                processorList[processorNumber].updateCache(block[0], block[1], "S")
-                                processor.updateCache(block[0],block[1],"S")
-                                processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
-                                processor.addNewLog(f"El P{processorNumber} leyo {address} con un valor {block[1]}, se cambia el estado de E a S")
-                                return
+                        elif block[2] == "M":
+                            processorList[processorNumber].updateCache(block[0], block[1], "S")
+                            processor.updateCache(block[0],block[1],"O")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de M a O")
+                            return
+
+                        elif block[2] == "E":
+                            processorList[processorNumber].updateCache(block[0], block[1], "S")
+                            processor.updateCache(block[0],block[1],"S")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de E a S")
+                            return
 
         processorList[processorNumber].setHitMiss("Miss")
         processorList[processorNumber].addNewLog(f"Es un Miss porque ningun procesador tiene el dato en un estado valido")
@@ -488,6 +500,9 @@ class Ventana:
                 #updates the cache
                 processorList[processorNumber].updateCache(block[1], value, "M")
 
+    def executeInputInstruction(self,instruction):
+        print(f"Se va a ejecutar la instruccion {instruction}")
+
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
         def newOperationRandProcessor(): # selects a random processor to give a random instruction
@@ -502,53 +517,67 @@ class Ventana:
         with self.lock:
             if self.pause == False:
                 newOperationRandProcessor()
-                print("Se actualiza")
-                #Iterates processors text boxes
-                for i, procesador in enumerate(lista_procesadores):
-                    if i == 0:
-                        textBox = self.text_box1
-                    elif i == 1:
-                        textBox = self.text_box2
-                    elif i == 2:
-                        textBox = self.text_box3
-                    elif i == 3:
-                        textBox = self.text_box4
 
-                    # Clean the text box
-                    textBox.delete(1.0, tk.END)
-
-                    # Updates cache values for each processor
-                    textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
-                    textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n","center")
-
-                    for bloque in procesador.getCache(): #Cache values
-                        textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
-
-                    # Updates cache states for each processor
-                    textBox.tag_configure("center", justify="center",font=("Helvetica", 12, "bold"))
-                    textBox.insert('end', f"State of the cache blocks:\n","center")
-
-                    for bloque in procesador.getCache(): #Cache states
-                        textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
-
-                    # Keeps the operations done by the processors updated
-                    self.currentOperations[i+1] = procesador.getCurrentOperation()
-                    self.currentHitMiss[i+1] = procesador.getHitMiss()
-
-                # Writes the actions done by the processors
-                self.text_box_info.delete(1.0,tk.END)
-                for key, value in self.currentOperations.items():  #Cache values
-                    self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
-
-                #Updates the memory on screen
-                self.text_box_memory.delete(1.0, tk.END)
-                self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-                self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n","center")
-                for key, value in memoria.getMemBlocks().items():  # Cache values
-                    self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
             else:
-                print("Esta pausado")
-                return
+                if self.inputOperation != "":
+                    print(f"Se va a mandar a ejecutar {self.inputOperation}")
+                    self.validateMOESI(self.inputOperation, lista_procesadores, memoria)
+                    self.inputOperation = ""
+                    return
+
+            # Iterates processors text boxes
+            for i, procesador in enumerate(lista_procesadores):
+                if i == 0:
+                    textBox = self.text_box1
+                elif i == 1:
+                    textBox = self.text_box2
+                elif i == 2:
+                    textBox = self.text_box3
+                elif i == 3:
+                    textBox = self.text_box4
+
+                # Clean the text box
+                textBox.delete(1.0, tk.END)
+
+                # Updates cache values for each processor
+                textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n", "center")
+
+                for bloque in procesador.getCache():  # Cache values
+                    textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
+
+                # Updates cache states for each processor
+                textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                textBox.insert('end', f"State of the cache blocks:\n", "center")
+
+                for bloque in procesador.getCache():  # Cache states
+                    textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
+
+                # Keeps the operations done by the processors updated
+                self.currentOperations[i + 1] = procesador.getCurrentOperation()
+                self.currentHitMiss[i + 1] = procesador.getHitMiss()
+
+            # Writes the actions done by the processors
+            self.text_box_info.delete(1.0, tk.END)
+            for key, value in self.currentOperations.items():  # Cache values
+                self.text_box_info.insert(tk.END,
+                                          f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
+
+            # Updates the memory on screen
+            self.text_box_memory.delete(1.0, tk.END)
+            self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+            self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n", "center")
+            for key, value in memoria.getMemBlocks().items():  # Cache values
+                self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
+
+            # Updates last processors logs on screen
+            self.processorsLogs.delete(1.0,tk.END)
+            self.processorsLogs.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+            self.processorsLogs.insert(tk.END, "Processors Logs:\n", "center")
+            for processor in lista_procesadores:
+                logs = processor.getlogs().split('\n')
+                lastLog = str(logs[-1])
+                self.processorsLogs.insert(tk.END, f"P{processor.getNumber()}:{lastLog}\n\n")
 
 
     def continuousUpdate(self, lista_procesadores, memoria,modo):
@@ -560,94 +589,6 @@ class Ventana:
             self.master.mainloop()
 
         #agregar el cambio a paso a paso***************************************** con un else
-
-
-class InputWindow(tk.Toplevel):
-    def __init__(self, master = None):
-        super().__init__(master)
-        self.title("Instruction Input")
-        self.geometry("275x175")
-        self.resizable(False, False)
-
-        self.result = ""
-
-        self.processorNumber = tk.StringVar(self)
-        self.operation = tk.StringVar(self)
-        self.address = tk.StringVar(self)
-        self.value = tk.StringVar(self)
-
-        # Processor number input label
-        first_label = ttk.Label(self, text="Processor Number:", padding=(5,5))
-        first_label.grid(row=0, column=0)
-        self.first_combobox = ttk.Combobox(self, values=["P1", "P2", "P3", "P4"], textvariable=self.processorNumber)
-        self.first_combobox.grid(row=0, column=1)
-
-        # Instruction input label
-        second_label = ttk.Label(self, text="Instruction:",padding=(5,5))
-        second_label.grid(row=1, column=0)
-        self.second_combobox = ttk.Combobox(self, values=["READ", "WRITE", "CALC"], textvariable=self.operation)
-        self.second_combobox.grid(row=1, column=1)
-        self.second_combobox.bind("<<ComboboxSelected>>", self.update_input_fields)
-
-        # Address input label
-        third_label = ttk.Label(self, text="address:", padding=(5,5))
-        third_label.grid(row=2, column=0)
-        self.third_combobox = ttk.Combobox(self, values=["000", "001", "010", "011", "100", "101", "110", "111"], textvariable=self.address)
-        self.third_combobox.grid(row=2, column=1)
-
-        # Value input label
-        fourth_label = ttk.Label(self, text="Hex value:", padding=(5,5))
-        fourth_label.grid(row=3, column=0)
-        self.fourth_entry = ttk.Entry(self, textvariable=self.value)
-        self.fourth_entry.grid(row=3, column=1)
-
-        # Botón para guardar los datos ingresados y cerrar la ventana
-        save_button = ttk.Button(self, text="Guardar", command=self.save_data, padding=(0,5))
-        save_button.grid(row=4, column=0)
-
-        # Botón para cancelar y cerrar la ventana
-        cancel_button = ttk.Button(self, text="Cancelar", command=self.destroy, padding=(5,5))
-        cancel_button.grid(row=4, column=1)
-
-        # Centrar la ventana en la pantalla
-        self.update_idletasks()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-
-    def save_data(self):
-        # Returns input data
-        number = self.processorNumber.get()
-        instruction = self.operation.get()
-        address = self.address.get()
-        value = self.value.get()
-
-        self.result = [number,instruction,address,value]
-
-        if self.result[1] == "READ":
-            self.result.pop()
-        elif self.result[1] == "CALC":
-            del self.result[-2:]
-
-        self.master.inputOperation = self.result
-        print(f"Resultado desde el input window {self.result}")
-        self.destroy()
-
-    def update_input_fields(self, event):
-        # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
-        if self.operation.get() == "CALC":
-            self.third_combobox.state(["disabled"])
-            self.fourth_entry.state(["disabled"])
-
-        elif self.operation.get() == "READ":
-            self.fourth_entry.state(["disabled"])
-            self.third_combobox.state(["!disabled"])
-
-        else:
-            self.third_combobox.state(["!disabled"])
-            self.fourth_entry.state(["!disabled"])
 
 def main():
     #validates execution mode
@@ -696,13 +637,9 @@ def main():
     ventana = Ventana(root,modo)
 
 
-    #Updates display window
-    if modo == 1:
+    # Updates display window
+    if ventana.modoActual == 1:
         ventana.continuousUpdate(processors,mem,modo)
-
-    elif modo == 2:
-        #ventana.stepUpdate(processors,mem)
-        print("modo step")
 
 
     # ejecuta la ventana
