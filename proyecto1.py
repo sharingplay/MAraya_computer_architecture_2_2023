@@ -183,29 +183,24 @@ class Processor:
 class Ventana:
     def __init__(self, master, modo):
 
-        self.currentOperations = {1: "",
-                                  2: "",
-                                  3: "",
-                                  4: ""}
+        self.currentOperations = {1: "", 2: "", 3: "", 4: ""}
+        self.currentHitMiss = {1: "", 2: "", 3: "", 4: ""}
 
-        self.currentHitMiss = {1: "",
-                               2: "",
-                               3: "",
-                               4: ""}
-
+        # input window attributes
         self.inputOperation = ""
+        self.processorNumber = tk.StringVar()
+        self.operation = tk.StringVar()
+        self.address = tk.StringVar()
+        self.value = tk.StringVar()
 
+        # pause attributes
         self.pause = True
         self.lock = threading.Lock() #lock pause asset
 
+        # window settings
         self.master = master
         self.modoActual = modo
-
-        # establece el tamaño de la ventana
-        self.master.geometry("900x550")
-
-        # establece la posición de la ventana
-        self.master.geometry("+{}+{}".format(350, 150))
+        self.master.geometry("1100x550+350+150")
         self.master.resizable(False, False)
 
 
@@ -231,32 +226,93 @@ class Ventana:
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
         # creates the buttons
-        self.boton1 = tk.Button(self.master, text= "boton1")
-        self.boton1.grid(row=2, column=0, padx=10, pady=10)
 
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
-        self.boton_pause.grid(row=2, column=1, padx=10, pady=10)
+        self.boton_pause.place(x = 850, y = 400)
 
         self.boton3 = tk.Button(self.master, text="new instruction", command = lambda: self.openInputWindow())
         self.boton3.grid(row=2, column=2, padx=10, pady=10)
 
-        self.boton4 = tk.Button(self.master, text="Boton 4")
-        self.boton4.grid(row=2, column=3, padx=10, pady=10)
 
-    def openInputWindow(self):
-        if self.pause == True:
-            inputWindow = InputWindow()
-            self.master.wait_window(inputWindow)
-            self.inputOperation = inputWindow.result
+        # Processor number input label and option box
+        self.pNumberLabel = ttk.Label(self.master, text="Processor Number:", padding=(5, 5))
+        self.pNumberLabel.place(x=800, y=50)
+        self.pNumber_combobox = ttk.Combobox(self.master, values=["P1", "P2", "P3", "P4"], textvariable=self.processorNumber, state = 'disabled')
+        self.pNumber_combobox.place(x = 925, y =55)
 
-            print(f"Operacion desde la ventana {self.inputOperation}")
+        # Instruction input label and option box
+        self.instructionLabel = ttk.Label(self.master, text="Instruction:", padding=(5, 5))
+        self.instructionLabel.place(x= 840, y=100)
+        self.instruction_combobox = ttk.Combobox(self.master, values=["READ", "WRITE", "CALC"], textvariable=self.operation, state = 'disabled')
+        self.instruction_combobox.place(x = 925, y = 105)
+        self.instruction_combobox.bind("<<ComboboxSelected>>", self.update_input_fields)
+
+        # Address input label and option box
+        self.addressLabel = ttk.Label(self.master, text="Address:", padding=(5, 5))
+        self.addressLabel.place(x = 853, y = 150)
+        self.address_combobox = ttk.Combobox(self.master, values=["000", "001", "010", "011", "100", "101", "110", "111"],
+                                           textvariable=self.address, state = 'disabled')
+        self.address_combobox.place(x = 925, y = 155)
+
+        # Value input label
+        self.hex_label = ttk.Label(self.master, text="Hex value:", padding=(5, 5))
+        self.hex_label.place(x = 842, y = 200)
+        self.hex_entry = ttk.Entry(self.master, textvariable=self.value, state = 'disabled')
+        self.hex_entry.place(x = 932, y = 205)
+
+        # button to store values and call the instruction
+        self.save_button = ttk.Button(self.master, text="Guardar", command=self.save_data, padding=(0, 5), state = 'disabled')
+        self.save_button.place(x = 955, y = 250)
+
+    def save_data(self):
+        # Returns input data
+        number = self.processorNumber.get()
+        instruction = self.operation.get()
+        address = self.address.get()
+        value = self.value.get()
+
+        self.inputOperation = [number, instruction, address, value]
+
+        if self.inputOperation[1] == "READ":
+            self.inputOperation.pop()
+        elif self.inputOperation[1] == "CALC":
+            del self.inputOperation[-2:]
+
+        print(f"Resultado desde el input window {self.inputOperation}")
+
+    def update_input_fields(self, event):
+        # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
+        selected_instruction = self.instruction_combobox.get()
+        if selected_instruction == "CALC":
+            self.address_combobox.state(["disabled"])
+            self.hex_entry.state(["disabled"])
+
+        elif selected_instruction == "READ":
+            self.hex_entry.state(["disabled"])
+            self.address_combobox.state(["!disabled"])
 
         else:
-            print("No se puede ingresar una operacion si no esta pausada la ejecucion")
+            self.address_combobox.state(["!disabled"])
+            self.hex_entry.state(["!disabled"])
+
 
     def changePause(self):
         with self.lock: #adquire pause lock
             self.pause = not self.pause
+        if self.pause == True:
+            self.save_button.configure(state = 'normal')
+            self.pNumber_combobox.configure(state='normal')
+            self.instruction_combobox.configure(state='normal')
+            self.address_combobox.configure(state='normal')
+            self.save_button.configure(state='normal')
+            self.hex_entry.configure(state='normal')
+        else:
+            self.save_button.configure(state='disabled')
+            self.pNumber_combobox.configure(state='disabled')
+            self.instruction_combobox.configure(state='disabled')
+            self.address_combobox.configure(state='disabled')
+            self.save_button.configure(state='disabled')
+            self.hex_entry.configure(state='disabled')
 
     def updateProcessor(self,procesador):
         procesador.updateCache("100",str(secrets.token_hex(2)),random.choice(["M","S","O","I","E"]))
