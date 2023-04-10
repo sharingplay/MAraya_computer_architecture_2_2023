@@ -79,7 +79,6 @@ class Processor:
 
     def addNewLog(self,log):
         self.logs += "\n"+log
-        print(self.logs)
 
     def getCurrentOperation(self):
         return self.currentOperation
@@ -206,16 +205,16 @@ class Ventana:
 
 
         # creates 4 text boxes for the processors
-        self.text_box1 = tk.Text(self.master, height=11, width=30)
+        self.text_box1 = tk.Text(self.master, height=11, width=25)
         self.text_box1.grid(row=0, column=0, padx=10, pady=10)
 
-        self.text_box2 = tk.Text(self.master, height=11, width=30)
+        self.text_box2 = tk.Text(self.master, height=11, width=25)
         self.text_box2.grid(row=0, column=1, padx=10, pady=10)
 
-        self.text_box3 = tk.Text(self.master, height=11, width=30)
+        self.text_box3 = tk.Text(self.master, height=11, width=25)
         self.text_box3.grid(row=1, column=0, padx=10, pady=10)
 
-        self.text_box4 = tk.Text(self.master, height=11, width=30)
+        self.text_box4 = tk.Text(self.master, height=11, width=25)
         self.text_box4.grid(row=1, column=1, padx=10, pady=10)
 
         # creates a text box to display the memory data
@@ -227,8 +226,8 @@ class Ventana:
         self.text_box_info.grid(row=1, column=2, padx=10, pady=10)
 
         # creates a text box for processors last logs
-        self.processorsLogs = tk.Text(self.master, height=15, width=35)
-        self.processorsLogs.grid(row=1, column=3, padx=10, pady=10)
+        self.processorsLogs = tk.Text(self.master, height=12, width=45)
+        self.processorsLogs.place(x = 715, y = 275)
 
         # creates the buttons
         self.boton_pause = tk.Button(self.master, text="pausa", command=lambda: self.changePause())
@@ -279,7 +278,6 @@ class Ventana:
         elif self.inputOperation[1] == "CALC":
             del self.inputOperation[-2:]
 
-
     def update_input_fields(self, event):
         # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
         selected_instruction = self.instruction_combobox.get()
@@ -294,7 +292,6 @@ class Ventana:
         else:
             self.address_combobox.state(["!disabled"])
             self.hex_entry.state(["!disabled"])
-
 
     def changePause(self):
         with self.lock: #adquire pause lock
@@ -341,9 +338,14 @@ class Ventana:
 
         elif request == "WRITE":
             print(f"Se quiere hacer un write del P{processorNumber + 1}")
-            #self.writeMOESI(processorList,memory,processorNumber,address,value)
+            self.writeMOESI(processorList,memory,processorNumber,address,value)
         else:
-            print(f"El P{processorNumber + 1} hace un calc")
+            self.calcMOESI(processorList, processorNumber)
+
+    def calcMOESI(self, processorList, processorNumber):
+        simulatedTime = random.choice([2000, 1000])
+        self.master.after(simulatedTime, print(f"El P{processorNumber + 1} va a realizar un CALC"), processorList, processorNumber)
+        processorList[processorNumber].addNewLog(f"El P{processorNumber + 1} realizo un CALC durante {simulatedTime} segundos")
 
     #checks if the data is in the processor cache
     def readMOESI(self, processorList, memory, processorNumber, address):
@@ -410,7 +412,6 @@ class Ventana:
         memoryReadData = memory.getMemBlock(address)
         processorList[processorNumber].updateCache(address,memoryReadData,"E")
         processorList[processorNumber].addNewLog(f"El P{processorNumber} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
-        print("Leyo memoria")
 
     def writeMOESI(self, processorList, memory, processorNumber, address, value):
 
