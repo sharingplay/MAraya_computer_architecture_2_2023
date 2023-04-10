@@ -357,11 +357,11 @@ class Ventana:
             # If it has a valid data value, reads it
             if block[0] == address:
                 if block[2] != "I":
-                    processorList[processorNumber].setHitMiss("Hit")
+                    processorList[processorNumber].setHitMiss("Read Hit")
                     processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {block[1]}")
                     return
                 else:
-                    processorList[processorNumber].setHitMiss("Miss")
+                    processorList[processorNumber].setHitMiss("Cache Miss")
                     processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
                     self.readMOESIProcessors(processorList, memory, processorNumber, address)
                     return
@@ -406,8 +406,7 @@ class Ventana:
                             processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de E a S")
                             return
 
-        processorList[processorNumber].setHitMiss("Miss")
-        processorList[processorNumber].addNewLog("Es un Miss porque ningun procesador tiene el dato en un estado valido de lectura")
+        processorList[processorNumber].addNewLog("Ningun procesador tiene el dato en un estado valido de lectura")
         self.readMOESIMemory(processorList, memory, processorNumber, address)
         print("Es un Miss porque ningun procesador tiene el dato en un estado valido de lectura")
 
@@ -416,13 +415,14 @@ class Ventana:
         processorList[processorNumber].updateCache(address,memoryReadData,"E")
         processorList[processorNumber].addNewLog(f"El P{processorNumber} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
 
+
     def writeMOESI(self, processorList, memory, processorNumber, address, value):
         processorCache = processorList[processorNumber].getCache()
 
         for block in processorCache:
             # If it has the address, writes on it and sets a Hit
             if block[0] == address:
-                processorList[processorNumber].setHitMiss("Hit")
+                processorList[processorNumber].setHitMiss("Write Hit")
                 # If its invalid
                 if block[2] == "I":
                     processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {block[1]} "
@@ -444,6 +444,7 @@ class Ventana:
                     for processsor in processorList:
                         if processsor.getNumber() != processorNumber:
                             processsor.invalidateCache(address)
+                            processsor.addNewLog(f"El estado de {address} cambio de S a I porque lo modifico P{processorNumber}")
 
                 #if its modified or owned
                 elif block[2] == "M" or "O":
@@ -456,7 +457,13 @@ class Ventana:
                     # invalidates the rest of the processors with the same address
                     for processsor in processorList:
                         if processsor.getNumber() != processorNumber:
+                            if block[2] == "M":
+                                processsor.addNewLog(f"El estado de {address} se cambia de M a I porque lo modifico P{processorNumber}")
+                            else:
+                                processsor.addNewLog(f"El estado de {address} se cambia de O a I porque lo modifico P{processorNumber}")
                             processsor.invalidateCache(address)
+
+
 
                 # Writes the value on the cache
                 processorList[processorNumber].updateCache(address, value, "M")
@@ -502,8 +509,6 @@ class Ventana:
                 #updates the cache
                 processorList[processorNumber].updateCache(block[1], value, "M")
 
-    def executeInputInstruction(self,instruction):
-        print(f"Se va a ejecutar la instruccion {instruction}")
 
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
@@ -593,13 +598,6 @@ class Ventana:
         #agregar el cambio a paso a paso*****************************************
 
 def main():
-    #validates execution mode
-    """
-    try:
-        mode = int(input("Seleccion el modo de ejecucion inicial:\n1)Ejecucion continua\n2)Ejecucion paso a paso\n"))
-    except ValueError:
-        print("El valor ingresado no es un entero")
-    """
     modo = 1
     #Creates a memory
     mem = Memory()
@@ -611,12 +609,12 @@ def main():
     p4 = Processor(4)
 
     p1.updateCache("001", "0x1fa2", "I")
-    p1.updateCache("010", "0xfae2", "M")
+    p1.updateCache("010", "0xfae2", "O")
     p1.updateCache("011", "0x1234", "E")
     p1.updateCache("100", "0xf2e3", "S")
 
     p2.updateCache("001", "0x1023", "S")
-    p2.updateCache("010", "0xaaaa", "I")
+    p2.updateCache("010", "0xaaaa", "S")
     p2.updateCache("101", "0x4321", "E")
     p2.updateCache("100", "0xf2e3", "S")
 
@@ -628,7 +626,7 @@ def main():
     p4.updateCache("001", "0x1023", "O")
     p4.updateCache("110", "0xfae2", "S")
     p4.updateCache("101", "0x1023", "I")
-    p4.updateCache("111", "0x1023", "I")
+    p4.updateCache("100", "0x1023", "O")
 
     #Processors list
     processors = [p1,p2,p3,p4]
