@@ -96,7 +96,6 @@ class Processor:
         #determines in which block it should be writen in case there is no invalid block
         else:
             set = int(address) % 2 #gets the set with a 2 way set logic
-            # gets the address of the blocks in set 0
 
             #checks the blocks of the specific set
             if set == 0:
@@ -310,8 +309,12 @@ class Ventana:
             self.hex_entry.configure(state='disabled')
             self.modoActual = 1
 
-    def updateProcessor(self,procesador):
-        procesador.updateCache("100",str(secrets.token_hex(2)),random.choice(["M","S","O","I","E"]))
+    def validateSet(self, address):
+        set = int(address) % 2
+        if set == 0:
+            return 0
+        else:
+            return 2
 
     # Determines what operation was done and applies MOESI
     def validateMOESI(self,instruction, processorList, memory):
@@ -419,16 +422,22 @@ class Ventana:
 
             for block in processorToInvalidate.getCache():
                 if address in block:
+
                     if block[2] == "I":
                         processorToInvalidate.addNewLog(f"Se mantiene {address} invalido porque P{pNumberInvalidates} lo modifico")
+
                     elif block[2] == "E":
                         processorToInvalidate.addNewLog(f"Se cambia de E a I en {address} porque P{pNumberInvalidates} lo modifico")
+
+                    # Invalidates the cache and stores the old value on memory if the old staste was Modified
                     elif block[2] == "M":
                         oldValue = processorToInvalidate.getCacheBlock(address)[1]
                         newValue = processorModified.getCurrentOperation()[3]
                         processorToInvalidate.addNewLog(f"Se mantiene el estado de {address} en M, pero antes se guarda {oldValue} "
                                                         f"en memoria y se actualiza el cache con {newValue}")
                         memory.updateMemBlock(address, oldValue)
+
+                    # Invalidates the cache and stores the old value on memory if the old staste was Owned
                     elif block[2] == "O":
                         oldValue = processorToInvalidate.getCacheBlock(address)[1]
                         newValue = processorModified.getCurrentOperation()[3]
@@ -470,7 +479,6 @@ class Ventana:
 
                 #if its modified or owned
                 elif block[2] == "M" or "O":
-                    # old value to store in memory
                     processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
 
                     # invalidates the rest of the processors with the same address
@@ -480,46 +488,105 @@ class Ventana:
                 # Writes the value on the cache
                 processorList[processorNumber].updateCache(address, value, "M")
                 return
+
         # If the processor doesn't have the address
         else:
-            for block in processorList[processorNumber].getCache():
+            set = self.validateSet(address)
+            priorityOrder = ["E","I","S","M","O"]
+            for letter in priorityOrder:
+                for block in processorList[processorNumber].getCache()[set:set+2]:
+                    if letter in block:
+                        if letter == "E":
+                            processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia E por M")
+                        elif letter == "I" or "S":
+                            processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, "
+                                                                     f"se cambia {letter} por M")
+                            for processor in processorList:
+                                invalidateCache(processor, address, processorList[processorNumber])
+                        elif letter == "O" or "M":
+                            processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, "
+                                                                     f"se cambia {letter} por M y se guarda en memoria {block[1]}")
+                            for processor in processorList:
+                                invalidateCache(processor, address, processorList[processorNumber])
 
-                if block[2] == "I":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block} "
-                        f"y se cambia la I por una M")
-                    # Invalidates the other caches with the same address
-                    for processsor in processorList:
-                        if processsor.getNumber() != processorNumber:
-                            processsor.invalidateCache(address, processorNumber + 1)
+                    processorList[processorNumber].updateCache(block[0], value, "M")
+                    return
 
-                elif block[2] == "S":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {block[1]} el valor {value} reemplazando {block} "
-                        f"y se cambia la S por una M")
-                    # Invalidates the other caches with the same address
-                    for processsor in processorList:
-                        if processsor.getNumber() != processorNumber:
-                            processsor.invalidateCache(address, processorNumber + 1)
+        """def stateGenerator():
+                states = ["I","E","S","M","O"]
+                for state in states:
+                    yield state
 
-                elif block[2] == "E":
-                    # Only this processor had the old memory value
-                    processorList[processorNumber].addNewLog(f"Se escribe en {block[1]} el valor {value} reemplazando {block}"
-                        f" y se cambia la E por una M")
-                    # if its modified or owned
+            states = stateGenerator()
+            # Checks the states to write the new value, giving a priority in of "I","E","S","M","O" to overwrite a block
+                currentState = next(states, None)
+                while currentState:
 
-                elif block[2] == "M" or "O":
-                    # old value to store in memory
-                    cacheToStore = processorList[processorNumber].getCacheBlock(block[1])
-                    memory.updateMemBlock(cacheToStore[0], cacheToStore[1])
-                    processorList[processorNumber].addNewLog(f"Se escribe en {block[1]} el valor {value} "
-                                                             f", se guarda en memoria el valor anterior {cacheToStore[1]} "
-                                                             f"y se pone una M como estado")
+                    # Writes on cache and invalidates the rest of the caches
+                    if currentState == "I" and currentState in block[2]:
+                        processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia I por M")
+                        for processor in processorList:
+                            invalidateCache(processor, address, processorList[processorNumber])
+                        return
 
-                    # invalidates the rest of the processors with the same address
-                    for processsor in processorList:
-                        if processsor.getNumber() != processorNumber:
-                            processsor.invalidateCache(address, processorNumber + 1)
-                #updates the cache
-                processorList[processorNumber].updateCache(block[1], value, "M")
+                    elif currentState == "S"  and currentState in block[2]:
+                        processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia S por M")
+                        for processor in processorList:
+                            invalidateCache(processor, address, processorList[processorNumber])
+                        return
+
+                    elif currentState == "E" and currentState in block[2]:
+                        processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia E por M")
+                        return
+
+                    # Stores old value on memory, writes on cache and invalidates the other caches
+                    elif currentState == "M" or currentState == "O" and currentState in block[2]:
+                        processorList[processorNumber].addNewLog(f"Se guarda en memoria: {block[1]}, se escribe en cache {value}"
+                                                                 f" reemplazando {block} y se cambia {currentState} por M")
+                        for processor in processorList:
+                            invalidateCache(processor, address, processorList[processorNumber])
+                        return
+
+                    currentState = next(states, None)
+
+            # updates the cache
+            processorList[processorNumber].updateCache(block[1], value, "M")"""
+        """processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block} "
+            f"y se cambia la I por una M")
+        # Invalidates the other caches with the same address
+        for processor in processorList:
+            if processor.getNumber() != processorNumber:
+                invalidateCache(processor, address, processorList[processorNumber])
+
+    elif block[2] == "S":
+        processorList[processorNumber].addNewLog(f"Se escribe en {block[1]} el valor {value} reemplazando {block} "
+            f"y se cambia la S por una M")
+        # Invalidates the other caches with the same address
+        for processor in processorList:
+            if processor.getNumber() != processorNumber:
+                invalidateCache(processor, address, processorList[processorNumber])
+
+    elif block[2] == "E":
+        # Only this processor had the old memory value
+        processorList[processorNumber].addNewLog(f"Se escribe en {block[1]} el valor {value} reemplazando {block}"
+            f" y se cambia la E por una M")
+        # if its modified or owned
+
+    elif block[2] == "M" or "O":
+        # old value to store in memory
+        cacheToStore = processorList[processorNumber].getCacheBlock(block[1])
+        memory.updateMemBlock(cacheToStore[0], cacheToStore[1])
+        processorList[processorNumber].addNewLog(f"Se escribe en {block[1]} el valor {value} "
+                                                 f", se guarda en memoria el valor anterior {cacheToStore[1]} "
+                                                 f"y se pone una M como estado")
+    
+        # invalidates the rest of the processors with the same address
+        for processsor in processorList:
+            if processsor.getNumber() != processorNumber:
+                invalidateCache(processor, address, processorList[processorNumber])
+#updates the cache
+processorList[processorNumber].updateCache(block[1], value, "M")"""
+
 
 
     # updates the window information
