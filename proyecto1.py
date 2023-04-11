@@ -67,14 +67,14 @@ class Processor:
             self.currentOperation = ["P" + str(self.number),"WRITE",randomBin(),randomHex()]
             self.logs += "\n" + str(self.currentOperation)
             print(self.logs)
-        # 40% chance of getting a read instruction
-        elif randomNumber > 0.3 and randomNumber < 0.7:
+        # 50% chance of getting a read instruction
+        elif randomNumber > 0.3 and randomNumber < 0.8:
             # return the processor number and the block that is going to read
             self.currentOperation = ["P" + str(self.number),"READ",randomBin()]
             self.logs += "\n" + str(self.currentOperation)
             print(self.logs)
-        # 30% chance of getting a calc instruction
-        else:
+        # 20% chance of getting a calc instruction
+        elif randomNumber >= 0.8 and randomNumber <= 1:
             self.currentOperation = ["P" + str(self.number),"CALC"]
             self.logs += "\n" + str(self.currentOperation)
             print(self.logs)
@@ -419,7 +419,7 @@ class Ventana:
     def readMOESIMemory(self,processorList, memory, processorNumber, address):
         memoryReadData = memory.getMemBlock(address)
         processorList[processorNumber].updateCache(address,memoryReadData,"E")
-        processorList[processorNumber].addNewLog(f"El P{processorNumber} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
+        processorList[processorNumber].addNewLog(f"El P{processorNumber + 1} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
 
 
     def writeMOESI(self, processorList, memory, processorNumber, address, value):
