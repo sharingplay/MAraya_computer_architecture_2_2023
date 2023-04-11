@@ -536,7 +536,7 @@ class Ventana:
                         elif letter == "I" or "S":
                             processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia {letter} por M")
                             for processor in processorList:
-                                if processor.getNumber() != processorNumber:
+                                if processor.getNumber() == processorNumber:
                                     invalidateCache(processor, address, processorList[processorNumber])
                             break
                         elif letter == "O" or "M":
