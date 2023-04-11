@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import secrets
+import re
+import tkinter.messagebox as messagebox
 
 class Memory:
     def __init__(self):
@@ -60,13 +62,13 @@ class Processor:
         randomNumber = random.uniform(0.1,1)
 
         # 30% chance of getting a write instruction
-        if randomNumber < -0.3:
+        if randomNumber <= 0.3:
             # return the processor number, the block number in binary and the hex value to write
             self.currentOperation = ["P" + str(self.number),"WRITE",randomBin(),randomHex()]
             self.logs += "\n" + str(self.currentOperation)
             print(self.logs)
         # 40% chance of getting a read instruction
-        elif randomNumber < 0.7:
+        elif randomNumber > 0.3 and randomNumber < 0.7:
             # return the processor number and the block that is going to read
             self.currentOperation = ["P" + str(self.number),"READ",randomBin()]
             self.logs += "\n" + str(self.currentOperation)
@@ -169,7 +171,6 @@ class Processor:
             if address in block:
                 return block
 
-
     def getNumber(self):
         return self.number
 
@@ -200,8 +201,6 @@ class Ventana:
         self.modoActual = modo
         self.master.geometry("1100x550+200+150")
         self.master.resizable(False, False)
-
-
 
         # creates 4 text boxes for the processors
         self.text_box1 = tk.Text(self.master, height=11, width=25)
@@ -257,11 +256,12 @@ class Ventana:
         self.hex_label = ttk.Label(self.master, text="Hex value:", padding=(5, 5))
         self.hex_label.place(x = 842, y = 160)
         self.hex_entry = ttk.Entry(self.master, textvariable=self.value, state = 'disabled')
-        self.hex_entry.place(x = 932, y = 165)
+        self.hex_entry.place(x=932, y=165)
 
         # button to store values and call the instruction
         self.save_button = ttk.Button(self.master, text="Guardar", command=self.save_data, padding=(0, 5), state = 'disabled')
         self.save_button.place(x = 955, y = 200)
+
 
     def save_data(self):
         # Returns input data
@@ -269,13 +269,13 @@ class Ventana:
         instruction = self.operation.get()
         address = self.address.get()
         value = self.value.get()
-
         self.inputOperation = [number, instruction, address, value]
 
         if self.inputOperation[1] == "READ":
             self.inputOperation.pop()
         elif self.inputOperation[1] == "CALC":
             del self.inputOperation[-2:]
+
 
     def update_input_fields(self, event):
         # Si la opción "CALC" está seleccionada, desactiva los campos de entrada de dirección y valor
@@ -336,12 +336,13 @@ class Ventana:
 
         print(instruction)
         if request == "READ":
-            print(f"Se quiere hacer un read del P{processorNumber+1}")
+            self.master.after(2000, print(f"Se quiere hacer un read del P{processorNumber+1}"))
             self.readMOESI(processorList,memory, processorNumber, address)
 
         elif request == "WRITE":
-            print(f"Se quiere hacer un write del P{processorNumber + 1}")
+            self.master.after(5000,print(f"Se quiere hacer un write del P{processorNumber + 1}") )
             self.writeMOESI(processorList,memory,processorNumber,address,value)
+
         else:
             self.calcMOESI(processorList, processorNumber)
 
@@ -358,16 +359,16 @@ class Ventana:
             # If it has a valid data value, reads it
             if block[0] == address:
                 if block[2] != "I":
-                    processorList[processorNumber].setHitMiss("Read Hit")
+                    processorList[processorNumber].setHitMiss("Cache Read Hit")
                     processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {block[1]}")
                     return
                 else:
-                    processorList[processorNumber].setHitMiss("Cache Miss")
+                    processorList[processorNumber].setHitMiss("Cahe Read Miss (invalid)")
                     processorList[processorNumber].addNewLog(f"Es un Miss porque {address} es un dato invalido")
                     self.readMOESIProcessors(processorList, memory, processorNumber, address)
                     return
         else:
-            processorList[processorNumber].setHitMiss("Miss")
+            processorList[processorNumber].setHitMiss("Cahe Read Miss (not in cache)")
             processorList[processorNumber].addNewLog(f"Es un Miss porque {address} no esta en cache")
             print((f"Es un Miss porque {address} no esta en cache"))
             self.readMOESIProcessors(processorList, memory, processorNumber, address)
@@ -622,7 +623,7 @@ class Ventana:
         # llama al método actualizar cada 2 segundos
         if modo == 1:
             self.actualizar(lista_procesadores,memoria)
-            self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
+            self.master.after(3000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
 
 def main():
     modo = 1
@@ -635,25 +636,25 @@ def main():
     p3 = Processor(3)
     p4 = Processor(4)
 
-    p1.updateCache("000", "0x1fa2", "I")
-    p1.updateCache("010", "0xfae2", "M")
-    p1.updateCache("001", "0x1234", "E")
-    p1.updateCache("011", "0xf2e3", "I")
-
-    p2.updateCache("000", "0x1023", "S")
-    p2.updateCache("110", "0xaaaa", "M")
-    p2.updateCache("101", "0x4321", "O")
-    p2.updateCache("111", "0xef23", "S")
-
-    p3.updateCache("000", "0x1023", "S")
-    p3.updateCache("100", "0xaaaa", "I")
-    p3.updateCache("111", "0xef23", "O")
-    p3.updateCache("101", "0x4321", "S")
-
-    p4.updateCache("000", "0x1023", "O")
-    p4.updateCache("010", "0x12ab", "I")
-    p4.updateCache("111", "0xef23", "S")
-    p4.updateCache("101", "0xbbbb", "I")
+    # p1.updateCache("000", "0x1fa2", "I")
+    # p1.updateCache("010", "0xfae2", "M")
+    # p1.updateCache("001", "0x1234", "E")
+    # p1.updateCache("011", "0xf2e3", "I")
+    #
+    # p2.updateCache("000", "0x1023", "S")
+    # p2.updateCache("110", "0xaaaa", "M")
+    # p2.updateCache("101", "0x4321", "O")
+    # p2.updateCache("111", "0xef23", "S")
+    #
+    # p3.updateCache("000", "0x1023", "S")
+    # p3.updateCache("100", "0xaaaa", "I")
+    # p3.updateCache("111", "0xef23", "O")
+    # p3.updateCache("101", "0x4321", "S")
+    #
+    # p4.updateCache("000", "0x1023", "O")
+    # p4.updateCache("010", "0x12ab", "I")
+    # p4.updateCache("111", "0xef23", "S")
+    # p4.updateCache("101", "0xbbbb", "I")
 
 
     #Processors list
@@ -663,7 +664,6 @@ def main():
     root = tk.Tk()
     root.title("Protocolo MOESI para coherencia de cache en sistemas multiprocesador")
     ventana = Ventana(root,modo)
-
 
     # Updates display window
     if ventana.modoActual == 1:
