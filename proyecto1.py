@@ -342,7 +342,7 @@ class Ventana:
 
         print(instruction)
         if request == "READ":
-            self.master.after(2000, print(f"Se quiere hacer un read del P{processorNumber+1}"))
+            self.master.after(3000, print(f"Se quiere hacer un read del P{processorNumber+1}"))
             self.readMOESI(processorList,memory, processorNumber, address)
 
         elif request == "WRITE":
@@ -353,9 +353,9 @@ class Ventana:
             self.calcMOESI(processorList, processorNumber)
 
     def calcMOESI(self, processorList, processorNumber):
-        simulatedTime = random.choice([2000, 1000])
+        simulatedTime = random.choice([3000, 2000, 1000])
         self.master.after(simulatedTime, print(f"El P{processorNumber + 1} va a realizar un CALC"), processorList, processorNumber)
-        processorList[processorNumber].addNewLog(f"El P{processorNumber + 1} realizo un CALC durante {simulatedTime} segundos")
+        processorList[processorNumber].addNewLog(f"El P{processorNumber + 1} realizo un CALC durante {str(simulatedTime)[0]} segundos")
 
     #checks if the data is in the processor cache
     def readMOESI(self, processorList, memory, processorNumber, address):
