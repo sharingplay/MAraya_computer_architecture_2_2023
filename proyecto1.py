@@ -6,25 +6,27 @@ import secrets
 
 class Memory:
     def __init__(self):
-        self.blocks = {"000": "0x0000",
-                       "001": "0x1234",
-                       "010": "0x8732",
-                       "011": "0xabcd",
-                       "100": "0xffaa",
-                       "101": "0xacfa",
-                       "110": "0x1045",
-                       "111": "0x5682"
+        self.blocks = {"000": 0x0000,
+                       "001": 0x0000,
+                       "010": 0x0000,
+                       "011": 0x0000,
+                       "100": 0x0000,
+                       "101": 0x0000,
+                       "110": 0x0000,
+                       "111": 0x0000
                        }
         """
         self.blocks = {
-                       "000": "0x0000",
-                       "001": "0x0000",
-                       "010": "0x0000",
-                       "011": "0x0000",
-                       "100": "0x0000",
-                       "101": "0x0000",
-                       "110": "0x0000",
-                       "111": "0x0000"}
+                        "000": "0x0000",
+                        "001": "0x1234",
+                        "010": "0x8732",
+                        "011": "0xabcd",
+                        "100": "0xffaa",
+                        "101": "0xacfa",
+                        "110": "0x1045",
+                        "111": "0x5682
+                       
+                       }
         """
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
@@ -42,7 +44,7 @@ class Processor:
         self.number = number
         self.currentOperation = []
         #address, value, state
-        self.cache = ["000","0x0000","I"],["010","0x0000","I"],["001","0x0000","I"], ["011","0x0000","I"]
+        self.cache = ["000",0x0000,"I"],["010",0x0000,"I"],["001",0x0000,"I"], ["011",0x0000,"I"]
 
 
     # assigns possible instructions to a processor
