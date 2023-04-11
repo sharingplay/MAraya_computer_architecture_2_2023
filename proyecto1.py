@@ -7,24 +7,24 @@ import secrets
 class Memory:
     def __init__(self):
         self.blocks = {"000": "0x0000",
-                       "001": "0x0045",
-                       "010": "0x010a",
-                       "011": "0x12af",
-                       "100": "0x54ea",
-                       "101": "0xe213",
-                       "110": "0xffaa",
-                       "111": "0xfeaa"
+                       "001": "0x1234",
+                       "010": "0x8732",
+                       "011": "0xabcd",
+                       "100": "0xffaa",
+                       "101": "0xacfa",
+                       "110": "0x1045",
+                       "111": "0x5682"
                        }
         """
         self.blocks = {
-                       "000": "0xffff",
-                       "001": "0xffff",
-                       "010": "0xffff",
-                       "011": "0xffff",
-                       "100": "0xffff",
-                       "101": "0xffff",
-                       "110": "0xffff",
-                       "111": "0xffff"}
+                       "000": "0x0000",
+                       "001": "0x0000",
+                       "010": "0x0000",
+                       "011": "0x0000",
+                       "100": "0x0000",
+                       "101": "0x0000",
+                       "110": "0x0000",
+                       "111": "0x0000"}
         """
     def updateMemBlock(self,block, value):
         self.blocks[block] = value
@@ -102,9 +102,20 @@ class Processor:
                 offset = 0
             else:
                 offset = 2
-
+            #["E","I","S","M","O"]
             #Checks invalid blocks
-            if "I" in self.cache[offset]:
+            # Checks Exclusive blocks
+            if "E" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "E" in self.cache[offset+1]:
+                self.cache[offset+1][0] = address
+                self.cache[offset+1][1] = value
+                self.cache[offset+1][2] = state
+
+            elif "I" in self.cache[offset]:
                 self.cache[offset][0] = address
                 self.cache[offset][1] = value
                 self.cache[offset][2] = state
@@ -125,6 +136,17 @@ class Processor:
                 self.cache[offset+1][1] = value
                 self.cache[offset+1][2] = state
 
+            # Cheks Modified blocks
+            elif "M" in self.cache[offset]:
+                self.cache[offset][0] = address
+                self.cache[offset][1] = value
+                self.cache[offset][2] = state
+
+            elif "M" in self.cache[offset+1]:
+                self.cache[offset+1][0] = address
+                self.cache[offset+1][1] = value
+                self.cache[offset+1][2] = state
+
             # Checks Owned blocks
             elif "O" in self.cache[offset]:
                 self.cache[offset][0] = address
@@ -136,27 +158,6 @@ class Processor:
                 self.cache[offset + 1][1] = value
                 self.cache[offset + 1][2] = state
 
-            # Checks Exclusive blocks
-            elif "E" in self.cache[offset]:
-                self.cache[offset][0] = address
-                self.cache[offset][1] = value
-                self.cache[offset][2] = state
-
-            elif "E" in self.cache[offset+1]:
-                self.cache[offset+1][0] = address
-                self.cache[offset+1][1] = value
-                self.cache[offset+1][2] = state
-
-            # Cheks Modified blocks
-            elif "M" in self.cache[offset]:
-                self.cache[offset][0] = address
-                self.cache[offset][1] = value
-                self.cache[offset][2] = state
-
-            elif "M" in self.cache[offset+1]:
-                self.cache[offset+1][0] = address
-                self.cache[offset+1][1] = value
-                self.cache[offset+1][2] = state
 
     def getCache(self):
         return self.cache
@@ -421,38 +422,42 @@ class Ventana:
             pNumberInvalidates = processorModified.getNumber()
 
             for block in processorToInvalidate.getCache():
+                # In case the invalidation has to be done in the cache of the processor that called it
                 if address in block:
+                    oldValue = processorToInvalidate.getCacheBlock(address)[1]
+                    if block[2] == "E":
+                        processorToInvalidate.addNewLog(f"Se cambia el estado en {address} de E a I porque P{pNumberInvalidates}"
+                                                        f" lo modifico")
 
-                    if block[2] == "I":
-                        processorToInvalidate.addNewLog(f"Se mantiene {address} invalido porque P{pNumberInvalidates} lo modifico")
+                    elif block[2] == "I":
+                        processorToInvalidate.addNewLog(f"Se mantiene el estado en {address} en I porque P{pNumberInvalidates}"
+                                                        f" lo modifico")
 
-                    elif block[2] == "E":
-                        processorToInvalidate.addNewLog(f"Se cambia de E a I en {address} porque P{pNumberInvalidates} lo modifico")
+                    elif block[2] == "S":
+                        processorToInvalidate.addNewLog(f"Se cambia el estado de en {address} de S a I porque P{pNumberInvalidates}"
+                                                        f" lo modifico")
 
                     # Invalidates the cache and stores the old value on memory if the old staste was Modified
                     elif block[2] == "M":
-                        oldValue = processorToInvalidate.getCacheBlock(address)[1]
-                        newValue = processorModified.getCurrentOperation()[3]
-                        processorToInvalidate.addNewLog(f"Se mantiene el estado de {address} en M, pero antes se guarda {oldValue} "
-                                                        f"en memoria y se actualiza el cache con {newValue}")
-                        memory.updateMemBlock(address, oldValue)
+                        processorToInvalidate.addNewLog(f"Se cambia el estado en {address} de M a I porque P{pNumberInvalidates}"
+                                                        f" lo modifico, pero antes se guarda {oldValue} en memoria")
+                        memory.updateMemBlock(block[0], block[1])
+
 
                     # Invalidates the cache and stores the old value on memory if the old staste was Owned
                     elif block[2] == "O":
-                        oldValue = processorToInvalidate.getCacheBlock(address)[1]
-                        newValue = processorModified.getCurrentOperation()[3]
-                        processorToInvalidate.addNewLog(f"Se cambia de O a I en {address} porque P{pNumberInvalidates} "
-                                                        f"lo modifico, se guarda en memoria {oldValue} y se actualiza el cache por {newValue}")
-                        memory.updateMemBlock(address, oldValue)
+                        processorToInvalidate.addNewLog(f"Se cambia el estado en {address} de O a I porque P{pNumberInvalidates}"
+                                                        f" lo modifico, pero antes se guarda {oldValue} en memoria")
+                        memory.updateMemBlock(block[0], block[1])
 
-                    elif block[2] == "S":
-                        processorToInvalidate.addNewLog(f"Se cambia de S a I en {address} porque P{pNumberInvalidates} lo modifico")
                     block[2] = "I"
+
+
 
         processorCache = processorList[processorNumber].getCache()
 
+        # If it has the address, writes on it and sets a Hit
         for block in processorCache:
-            # If it has the address, writes on it and sets a Hit
             if block[0] == address:
                 processorList[processorNumber].setHitMiss("Write Hit")
                 # If its invalid
@@ -477,13 +482,24 @@ class Ventana:
                         if processor.getNumber() != processorNumber + 1:
                             invalidateCache(processor, address, processorList[processorNumber])
 
-                #if its modified or owned
-                elif block[2] == "M" or "O":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
+                # if its modified
+                elif block[2] == "M":
 
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
                     # invalidates the rest of the processors with the same address
+                    memory.updateMemBlock(block[0],block[1])
                     for processor in processorList:
-                        invalidateCache(processor, address, processorList[processorNumber])
+                        if processor.getNumber() != processorNumber + 1:
+                            invalidateCache(processor, address, processorList[processorNumber])
+
+                # if its owned
+                elif block[2] == "O":
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
+                    # invalidates the rest of the processors with the same address
+                    memory.updateMemBlock(block[0], block[1])
+                    for processor in processorList:
+                        if processor.getNumber() != processorNumber + 1:
+                            invalidateCache(processor, address, processorList[processorNumber])
 
                 # Writes the value on the cache
                 processorList[processorNumber].updateCache(address, value, "M")
@@ -498,19 +514,22 @@ class Ventana:
                     if letter in block:
                         if letter == "E":
                             processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia E por M")
+                            break
                         elif letter == "I" or "S":
-                            processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, "
-                                                                     f"se cambia {letter} por M")
+                            processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia {letter} por M")
                             for processor in processorList:
-                                invalidateCache(processor, address, processorList[processorNumber])
+                                if processor.getNumber() != processorNumber:
+                                    invalidateCache(processor, address, processorList[processorNumber])
+                            break
                         elif letter == "O" or "M":
                             processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, "
                                                                      f"se cambia {letter} por M y se guarda en memoria {block[1]}")
                             for processor in processorList:
                                 invalidateCache(processor, address, processorList[processorNumber])
-
-                processorList[processorNumber].updateCache(address, value, "M")
-                return
+                            break
+                    break
+            processorList[processorNumber].updateCache(address, value, "M")
+            return
 
     # updates the window information
     def actualizar(self, lista_procesadores, memoria):
@@ -526,51 +545,50 @@ class Ventana:
         with self.lock:
             if self.pause == False:
                 newOperationRandProcessor()
+                return
 
             else:
-                if self.inputOperation != "":
-                    print(f"Se va a mandar a ejecutar {self.inputOperation}")
+                while self.inputOperation != "":
                     self.validateMOESI(self.inputOperation, lista_procesadores, memoria)
                     self.inputOperation = ""
                     return
 
-            # Iterates processors text boxes
-            for i, procesador in enumerate(lista_procesadores):
-                if i == 0:
-                    textBox = self.text_box1
-                elif i == 1:
-                    textBox = self.text_box2
-                elif i == 2:
-                    textBox = self.text_box3
-                elif i == 3:
-                    textBox = self.text_box4
+        # Iterates processors text boxes
+        for i, procesador in enumerate(lista_procesadores):
+            if i == 0:
+                textBox = self.text_box1
+            elif i == 1:
+                textBox = self.text_box2
+            elif i == 2:
+                textBox = self.text_box3
+            elif i == 3:
+                textBox = self.text_box4
 
-                # Clean the text box
-                textBox.delete(1.0, tk.END)
+            # Clean the text box
+            textBox.delete(1.0, tk.END)
 
-                # Updates cache values for each processor
-                textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-                textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n", "center")
+            # Updates cache values for each processor
+            textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+            textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n", "center")
 
-                for bloque in procesador.getCache():  # Cache values
-                    textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
+            for bloque in procesador.getCache():  # Cache values
+                textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
 
-                # Updates cache states for each processor
-                textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-                textBox.insert('end', f"State of the cache blocks:\n", "center")
+            # Updates cache states for each processor
+            textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+            textBox.insert('end', f"State of the cache blocks:\n", "center")
 
-                for bloque in procesador.getCache():  # Cache states
-                    textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
+            for bloque in procesador.getCache():  # Cache states
+                textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
 
-                # Keeps the operations done by the processors updated
-                self.currentOperations[i + 1] = procesador.getCurrentOperation()
-                self.currentHitMiss[i + 1] = procesador.getHitMiss()
+            # Keeps the operations done by the processors updated
+            self.currentOperations[i + 1] = procesador.getCurrentOperation()
+            self.currentHitMiss[i + 1] = procesador.getHitMiss()
 
             # Writes the actions done by the processors
             self.text_box_info.delete(1.0, tk.END)
             for key, value in self.currentOperations.items():  # Cache values
-                self.text_box_info.insert(tk.END,
-                                          f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
+                self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
 
             # Updates the memory on screen
             self.text_box_memory.delete(1.0, tk.END)
@@ -593,11 +611,9 @@ class Ventana:
         # llama al método actualizar cada 2 segundos
         if modo == 1:
             self.actualizar(lista_procesadores,memoria)
-            self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
+            self.master.after(1000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
             # inicia el bucle de eventos
             self.master.mainloop()
-
-        #agregar el cambio a paso a paso*****************************************
 
 def main():
     modo = 1
@@ -610,25 +626,26 @@ def main():
     p3 = Processor(3)
     p4 = Processor(4)
 
-    p1.updateCache("001", "0x1fa2", "I")
-    p1.updateCache("010", "0xfae2", "O")
-    p1.updateCache("011", "0x1234", "E")
-    p1.updateCache("100", "0xf2e3", "S")
+    p1.updateCache("000", "0x1fa2", "I")
+    p1.updateCache("010", "0xfae2", "M")
+    p1.updateCache("001", "0x1234", "E")
+    p1.updateCache("011", "0xf2e3", "I")
 
-    p2.updateCache("001", "0x1023", "S")
-    p2.updateCache("010", "0xaaaa", "S")
-    p2.updateCache("101", "0x4321", "E")
-    p2.updateCache("100", "0xf2e3", "S")
+    p2.updateCache("000", "0x1023", "S")
+    p2.updateCache("110", "0xaaaa", "M")
+    p2.updateCache("101", "0x4321", "O")
+    p2.updateCache("111", "0xef23", "S")
 
-    p3.updateCache("001", "0x1023", "S")
-    p3.updateCache("010", "0xaaaa", "I")
-    p3.updateCache("011", "0xef23", "M")
-    p3.updateCache("100", "0xf2e3", "S")
+    p3.updateCache("000", "0x1023", "S")
+    p3.updateCache("100", "0xaaaa", "I")
+    p3.updateCache("111", "0xef23", "O")
+    p3.updateCache("101", "0x4321", "S")
 
-    p4.updateCache("001", "0x1023", "O")
-    p4.updateCache("110", "0xfae2", "S")
-    p4.updateCache("101", "0x1023", "I")
-    p4.updateCache("100", "0x1023", "O")
+    p4.updateCache("000", "0x1023", "O")
+    p4.updateCache("010", "0x12ab", "I")
+    p4.updateCache("111", "0xef23", "S")
+    p4.updateCache("101", "0xbbbb", "I")
+
 
     #Processors list
     processors = [p1,p2,p3,p4]
