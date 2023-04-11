@@ -215,7 +215,7 @@ class Ventana:
         self.text_box4.grid(row=1, column=1, padx=10, pady=10)
 
         # creates a text box to display the memory data
-        self.text_box_memory = tk.Text(self.master, height=15, width=30)
+        self.text_box_memory = tk.Text(self.master, height=17, width=30)
         self.text_box_memory.grid(row=0, column=2, padx=10, pady=10)
 
         # creates a text box for information on processor states
@@ -380,13 +380,15 @@ class Ventana:
                         # Updates the cache of both processors
                         if block[2] == "S":
                             processorList[processorNumber].updateCache(block[0],block[1],"S")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}, "
+                                                                     f"se reemplaza el bloque {block}")
                             processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se mantiene el estado en S")
                             return
 
                         elif block[2] == "O":
                             processorList[processorNumber].updateCache(block[0],block[1],"S")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}, "
+                                                                     f"se reemplaza el bloque {block}")
                             processor.updateCache(block[0],block[1],"S")
                             processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de O a S")
                             return
@@ -394,14 +396,16 @@ class Ventana:
                         elif block[2] == "M":
                             processorList[processorNumber].updateCache(block[0], block[1], "S")
                             processor.updateCache(block[0],block[1],"O")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}, "
+                                                                     f"se reemplaza el bloque {block}")
                             processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de M a O")
                             return
 
                         elif block[2] == "E":
                             processorList[processorNumber].updateCache(block[0], block[1], "S")
                             processor.updateCache(block[0],block[1],"S")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}, "
+                                                                     f"se reemplaza el bloque {block}")
                             processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de E a S")
                             return
 
@@ -484,7 +488,6 @@ class Ventana:
 
                 # if its modified
                 elif block[2] == "M":
-
                     processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
                     # invalidates the rest of the processors with the same address
                     memory.updateMemBlock(block[0],block[1])
@@ -507,6 +510,7 @@ class Ventana:
 
         # If the processor doesn't have the address
         else:
+            processorList[processorNumber].setHitMiss("Write Miss")
             set = self.validateSet(address)
             priorityOrder = ["E","I","S","M","O"]
             for letter in priorityOrder:
@@ -514,6 +518,9 @@ class Ventana:
                     if letter in block:
                         if letter == "E":
                             processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia E por M")
+                            for processor in processorList:
+                                if processor.getNumber() != processorNumber:
+                                    invalidateCache(processor, address, processorList[processorNumber])
                             break
                         elif letter == "I" or "S":
                             processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, se cambia {letter} por M")
@@ -527,6 +534,7 @@ class Ventana:
                             for processor in processorList:
                                 invalidateCache(processor, address, processorList[processorNumber])
                             break
+
                     break
             processorList[processorNumber].updateCache(address, value, "M")
             return
@@ -541,79 +549,78 @@ class Ventana:
             #calls the invalidation protocol
             self.validateMOESI(lista_procesadores[pNumber].getCurrentOperation(), lista_procesadores, memoria)
 
+        def updateWindow():
+            # Iterates processors text boxes
+            for i, procesador in enumerate(lista_procesadores):
+                if i == 0:
+                    textBox = self.text_box1
+                elif i == 1:
+                    textBox = self.text_box2
+                elif i == 2:
+                    textBox = self.text_box3
+                elif i == 3:
+                    textBox = self.text_box4
+
+                # Clean the text box
+                textBox.delete(1.0, tk.END)
+
+                # Updates cache values for each processor
+                textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n", "center")
+
+                for bloque in procesador.getCache():  # Cache values
+                    textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
+
+                # Updates cache states for each processor
+                textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                textBox.insert('end', f"State of the cache blocks:\n", "center")
+
+                for bloque in procesador.getCache():  # Cache states
+                    textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
+
+                # Keeps the operations done by the processors updated
+                self.currentOperations[i + 1] = procesador.getCurrentOperation()
+                self.currentHitMiss[i + 1] = procesador.getHitMiss()
+
+                # Writes the actions done by the processors
+                self.text_box_info.delete(1.0, tk.END)
+                for key, value in self.currentOperations.items():  # Cache values
+                    self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
+
+                # Updates the memory on screen
+                self.text_box_memory.delete(1.0, tk.END)
+                self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n", "center")
+                for key, value in memoria.getMemBlocks().items():  # Cache values
+                    self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
+
+                # Updates last processors logs on screen
+                self.processorsLogs.delete(1.0, tk.END)
+                self.processorsLogs.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
+                self.processorsLogs.insert(tk.END, "Processors Logs:\n", "center")
+                for processor in lista_procesadores:
+                    logs = processor.getlogs().split('\n')
+                    lastLog = str(logs[-1])
+                    self.processorsLogs.insert(tk.END, f"P{processor.getNumber()}:{lastLog}\n\n")
 
         with self.lock:
             if self.pause == False:
                 newOperationRandProcessor()
+                updateWindow()
                 return
 
             else:
-                while self.inputOperation != "":
+                if self.inputOperation != "":
                     self.validateMOESI(self.inputOperation, lista_procesadores, memoria)
                     self.inputOperation = ""
+                    updateWindow()
                     return
-
-        # Iterates processors text boxes
-        for i, procesador in enumerate(lista_procesadores):
-            if i == 0:
-                textBox = self.text_box1
-            elif i == 1:
-                textBox = self.text_box2
-            elif i == 2:
-                textBox = self.text_box3
-            elif i == 3:
-                textBox = self.text_box4
-
-            # Clean the text box
-            textBox.delete(1.0, tk.END)
-
-            # Updates cache values for each processor
-            textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-            textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n", "center")
-
-            for bloque in procesador.getCache():  # Cache values
-                textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
-
-            # Updates cache states for each processor
-            textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-            textBox.insert('end', f"State of the cache blocks:\n", "center")
-
-            for bloque in procesador.getCache():  # Cache states
-                textBox.insert('end', f"{bloque[0]}: {bloque[2]}\n")
-
-            # Keeps the operations done by the processors updated
-            self.currentOperations[i + 1] = procesador.getCurrentOperation()
-            self.currentHitMiss[i + 1] = procesador.getHitMiss()
-
-            # Writes the actions done by the processors
-            self.text_box_info.delete(1.0, tk.END)
-            for key, value in self.currentOperations.items():  # Cache values
-                self.text_box_info.insert(tk.END, f"Processor {key} action:\n{value}\n{self.currentHitMiss[key]}\n")
-
-            # Updates the memory on screen
-            self.text_box_memory.delete(1.0, tk.END)
-            self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-            self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n", "center")
-            for key, value in memoria.getMemBlocks().items():  # Cache values
-                self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
-
-            # Updates last processors logs on screen
-            self.processorsLogs.delete(1.0,tk.END)
-            self.processorsLogs.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
-            self.processorsLogs.insert(tk.END, "Processors Logs:\n", "center")
-            for processor in lista_procesadores:
-                logs = processor.getlogs().split('\n')
-                lastLog = str(logs[-1])
-                self.processorsLogs.insert(tk.END, f"P{processor.getNumber()}:{lastLog}\n\n")
-
 
     def continuousUpdate(self, lista_procesadores, memoria,modo):
         # llama al método actualizar cada 2 segundos
         if modo == 1:
             self.actualizar(lista_procesadores,memoria)
-            self.master.after(1000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
-            # inicia el bucle de eventos
-            self.master.mainloop()
+            self.master.after(2000, lambda: self.continuousUpdate(lista_procesadores, memoria,modo))
 
 def main():
     modo = 1
@@ -666,3 +673,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
