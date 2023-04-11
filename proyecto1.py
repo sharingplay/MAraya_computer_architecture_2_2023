@@ -269,6 +269,12 @@ class Ventana:
         instruction = self.operation.get()
         address = self.address.get()
         value = self.value.get()
+
+        if instruction == "WRITE":
+            if not re.match(r'^[0-9a-fA-F]+$', value, re.IGNORECASE):
+                tk.messagebox.showerror("Error", "El valor introducido no es hexadecimal")
+                return
+
         self.inputOperation = [number, instruction, address, value]
 
         if self.inputOperation[1] == "READ":
