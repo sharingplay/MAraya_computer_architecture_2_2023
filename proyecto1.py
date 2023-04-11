@@ -9,6 +9,25 @@ import tkinter.messagebox as messagebox
 class Memory:
     def __init__(self):
         self.blocks = {"000": 0x0000,
+                        "001": 0x1234,
+                        "010": 0x8732,
+                        "011": 0xabcd,
+                        "100": 0xffaa,
+                        "101": 0xacfa,
+                        "110": 0x1045,
+                        "111": 0x5682}
+        """
+        self.blocks = {
+                        "000": 0x0000,
+                        "001": 0x1234,
+                        "010": 0x8732,
+                        "011": 0xabcd,
+                        "100": 0xffaa,
+                        "101": 0xacfa,
+                        "110": 0x1045,
+                        "111": 0x5682
+                        
+                        "000": 0x0000,
                        "001": 0x0000,
                        "010": 0x0000,
                        "011": 0x0000,
@@ -16,17 +35,6 @@ class Memory:
                        "101": 0x0000,
                        "110": 0x0000,
                        "111": 0x0000
-                       }
-        """
-        self.blocks = {
-                        "000": "0x0000",
-                        "001": "0x1234",
-                        "010": "0x8732",
-                        "011": "0xabcd",
-                        "100": "0xffaa",
-                        "101": "0xacfa",
-                        "110": "0x1045",
-                        "111": "0x5682
                        
                        }
         """
@@ -59,25 +67,23 @@ class Processor:
             return bin(random.getrandbits(3))[2:].zfill(3)
 
         # random number to get probability
-        randomNumber = random.uniform(0.1,1)
+        randomNumber = random.uniform(0,1)
 
-        # 30% chance of getting a write instruction
+        # 33% chance of getting a write instruction
         if randomNumber <= 0.3:
             # return the processor number, the block number in binary and the hex value to write
             self.currentOperation = ["P" + str(self.number),"WRITE",randomBin(),randomHex()]
             self.logs += "\n" + str(self.currentOperation)
-            print(self.logs)
-        # 50% chance of getting a read instruction
-        elif randomNumber > 0.3 and randomNumber < 0.8:
+        # 33% chance of getting a read instruction
+        elif randomNumber > 0.3 and randomNumber <= 0.6:
             # return the processor number and the block that is going to read
             self.currentOperation = ["P" + str(self.number),"READ",randomBin()]
             self.logs += "\n" + str(self.currentOperation)
-            print(self.logs)
-        # 20% chance of getting a calc instruction
-        elif randomNumber >= 0.8 and randomNumber <= 1:
+        # 33% chance of getting a calc instruction
+        elif randomNumber > 0.6 and randomNumber <= 1:
             self.currentOperation = ["P" + str(self.number),"CALC"]
             self.logs += "\n" + str(self.currentOperation)
-            print(self.logs)
+
 
 
     def getlogs(self):
@@ -366,7 +372,7 @@ class Ventana:
             if block[0] == address:
                 if block[2] != "I":
                     processorList[processorNumber].setHitMiss("Cache Read Hit")
-                    processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {block[1]}")
+                    processorList[processorNumber].addNewLog(f"Es un Hit y se lee {address} del mismo procesador y mantiene el valor {hex(block[1])}")
                     return
                 else:
                     processorList[processorNumber].setHitMiss("Cahe Read Miss (invalid)")
@@ -389,33 +395,29 @@ class Ventana:
                         # Updates the cache of both processors
                         if block[2] == "S":
                             processorList[processorNumber].updateCache(block[0],block[1],"S")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}, "
-                                                                     f"se reemplaza el bloque {block}")
-                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se mantiene el estado en S")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {hex(block[1])}")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {hex(block[1])}, se mantiene el estado en S")
                             return
 
                         elif block[2] == "O":
                             processorList[processorNumber].updateCache(block[0],block[1],"S")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato en {block[2]}, se lee {address} con un valor {block[1]}, "
-                                                                     f"se reemplaza el bloque {block}")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {hex(block[1])}")
                             processor.updateCache(block[0],block[1],"S")
-                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de O a S")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {hex(block[1])}, se cambia el estado de O a S")
                             return
 
                         elif block[2] == "M":
                             processorList[processorNumber].updateCache(block[0], block[1], "S")
                             processor.updateCache(block[0],block[1],"O")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}, "
-                                                                     f"se reemplaza el bloque {block}")
-                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de M a O")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {hex(block[1])}")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {hex(block[1])}, se cambia el estado de M a O")
                             return
 
                         elif block[2] == "E":
                             processorList[processorNumber].updateCache(block[0], block[1], "S")
                             processor.updateCache(block[0],block[1],"S")
-                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {block[1]}, "
-                                                                     f"se reemplaza el bloque {block}")
-                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {block[1]}, se cambia el estado de E a S")
+                            processorList[processorNumber].addNewLog(f"El P{processor.getNumber()} tiene el dato y se lee {address} con un valor {hex(block[1])}")
+                            processor.addNewLog(f"El P{processorNumber + 1} leyo {address} con un valor {hex(block[1])}, se cambia el estado de E a S")
                             return
 
         processorList[processorNumber].addNewLog("Ningun procesador tiene el dato en un estado valido de lectura")
@@ -425,7 +427,7 @@ class Ventana:
     def readMOESIMemory(self,processorList, memory, processorNumber, address):
         memoryReadData = memory.getMemBlock(address)
         processorList[processorNumber].updateCache(address,memoryReadData,"E")
-        processorList[processorNumber].addNewLog(f"El P{processorNumber + 1} leyo {address} de memoria con un valor de {memoryReadData}, se cambia el estado a E")
+        processorList[processorNumber].addNewLog(f"El P{processorNumber + 1} leyo {address} de memoria con un valor de {hex(memoryReadData)}, se cambia el estado a E")
 
 
     def writeMOESI(self, processorList, memory, processorNumber, address, value):
@@ -475,7 +477,7 @@ class Ventana:
                 processorList[processorNumber].setHitMiss("Write Hit")
                 # If its invalid
                 if block[2] == "I":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {block[1]} "
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {hex(block[1])} "
                                                              f"y se cambia la I por una M")
                     # Invalidates the other caches with the same address
                     for processor in processorList:
@@ -484,11 +486,11 @@ class Ventana:
 
                 elif block[2] == "E":
                     # Only this processor had the old memory value
-                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {block[1]}"
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {hex(block[1])}"
                                                              f" y se cambia la E por una M")
 
                 elif block[2] == "S":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {block[1]} "
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} reemplazando {hex(block[1])} "
                                                              f"y se cambia la S por una M")
                     # Invalidates the other caches with the same address
                     for processor in processorList:
@@ -497,7 +499,7 @@ class Ventana:
 
                 # if its modified
                 elif block[2] == "M":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {hex(block[1])}")
                     # invalidates the rest of the processors with the same address
                     memory.updateMemBlock(block[0],block[1])
                     for processor in processorList:
@@ -506,7 +508,7 @@ class Ventana:
 
                 # if its owned
                 elif block[2] == "O":
-                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {block[1]}")
+                    processorList[processorNumber].addNewLog(f"Se escribe en {address} el valor {value} y se guarda en memoria el valor anterior {hex(block[1])}")
                     # invalidates the rest of the processors with the same address
                     memory.updateMemBlock(block[0], block[1])
                     for processor in processorList:
@@ -539,7 +541,7 @@ class Ventana:
                             break
                         elif letter == "O" or "M":
                             processorList[processorNumber].addNewLog(f"Se escribe en {block[0]} el valor {value} reemplazando {block}, "
-                                                                     f"se cambia {letter} por M y se guarda en memoria {block[1]}")
+                                                                     f"se cambia {letter} por M y se guarda en memoria {hex(block[1])}")
                             for processor in processorList:
                                 invalidateCache(processor, address, processorList[processorNumber])
                             break
@@ -578,7 +580,12 @@ class Ventana:
                 textBox.insert('end', f"Cache of processor {lista_procesadores[i].getNumber()}:\n", "center")
 
                 for bloque in procesador.getCache():  # Cache values
-                    textBox.insert('end', f"{bloque[0]}: {bloque[1]} \n")
+                    try:
+                        value = int(bloque[1],16)
+                        hexValue = hex(value)
+                        textBox.insert('end', f"{bloque[0]}: {hexValue} \n")
+                    except:
+                        textBox.insert('end', f"{bloque[0]}: {hex(bloque[1])} \n")
 
                 # Updates cache states for each processor
                 textBox.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
@@ -601,7 +608,7 @@ class Ventana:
                 self.text_box_memory.tag_configure("center", justify="center", font=("Helvetica", 12, "bold"))
                 self.text_box_memory.insert(tk.END, "Shared Memory Blocks:\n", "center")
                 for key, value in memoria.getMemBlocks().items():  # Cache values
-                    self.text_box_memory.insert(tk.END, f"Block {key} value:{value}\n\n")
+                    self.text_box_memory.insert(tk.END, f"Block {key} value:{hex(value)}\n\n")
 
                 # Updates last processors logs on screen
                 self.processorsLogs.delete(1.0, tk.END)
@@ -642,25 +649,25 @@ def main():
     p3 = Processor(3)
     p4 = Processor(4)
 
-    # p1.updateCache("000", "0x1fa2", "I")
-    # p1.updateCache("010", "0xfae2", "M")
-    # p1.updateCache("001", "0x1234", "E")
-    # p1.updateCache("011", "0xf2e3", "I")
-    #
-    # p2.updateCache("000", "0x1023", "S")
-    # p2.updateCache("110", "0xaaaa", "M")
-    # p2.updateCache("101", "0x4321", "O")
-    # p2.updateCache("111", "0xef23", "S")
-    #
-    # p3.updateCache("000", "0x1023", "S")
-    # p3.updateCache("100", "0xaaaa", "I")
-    # p3.updateCache("111", "0xef23", "O")
-    # p3.updateCache("101", "0x4321", "S")
-    #
-    # p4.updateCache("000", "0x1023", "O")
-    # p4.updateCache("010", "0x12ab", "I")
-    # p4.updateCache("111", "0xef23", "S")
-    # p4.updateCache("101", "0xbbbb", "I")
+    p1.updateCache("000", 0x1fa2, "I")
+    p1.updateCache("010", 0xfae2, "M")
+    p1.updateCache("001", 0x1234, "E")
+    p1.updateCache("011", 0xf2e3, "I")
+
+    p2.updateCache("000", 0x1023, "S")
+    p2.updateCache("110", 0xaaaa, "M")
+    p2.updateCache("101", 0x4321, "O")
+    p2.updateCache("111", 0xef23, "S")
+
+    p3.updateCache("000", 0x1023, "S")
+    p3.updateCache("100", 0xaaaa, "I")
+    p3.updateCache("111", 0xef23, "O")
+    p3.updateCache("101", 0x4321, "S")
+
+    p4.updateCache("000", 0x1023, "O")
+    p4.updateCache("010", 0x12ab, "I")
+    p4.updateCache("111", 0xef23, "S")
+    p4.updateCache("101", 0xbbb, "I")
 
 
     #Processors list
